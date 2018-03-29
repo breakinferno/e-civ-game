@@ -6,9 +6,10 @@ import * as PIXI from 'pixi.js';
 import Bump from 'bump.js'
 
 export default class BattleGround {
-    constructor(x = 800, y = 600, layout = { col: 30, row: 40 }, gameScene = new PIXI.Container(), gameOverScene = new PIXI.Container()) {
-        this.gameOverScene = gameOverScene;
-        this.gameScene = gameScene;
+    constructor(x = 800, y = 600, layout = { col: 30, row: 40 }, scenes = []) {
+        this.currentScene = scenes[0]['scene'];
+        this.gameScene = scenes[0]['scene'];
+        this.gameOverScene = scenes[scenes.length - 1]['scene'];
         this.layout = layout;
         this.children = [];
         this.groups = {};

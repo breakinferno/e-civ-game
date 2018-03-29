@@ -12,6 +12,12 @@ let Application = PIXI.Application,
     Text = PIXI.Text,
     TextStyle = PIXI.TextStyle;
 
+const DEFAULT_SOURCE_URL = [
+    '/images/cat.png',
+    '/images/treasureHunter.json',
+    '/images/testCharacter.json'
+];
+
 
 class GameScene {
     constructor(options) {
@@ -25,11 +31,36 @@ class GameScene {
         });
         this._init();
     }
+    // 依次按照顺序加载场景
+    // 每个场景结束都调用自己的回调函数，
+    // 并且接受上个场景的结果
+    start(side = 'my', autoSize = true) {
+        this.battleGround.initGroup(side);
+        this.battleGround.addGroupToScene(autoSize);
+        this.battleGround.battle();
+        // this.battleGround.over((side) => {
+        //     if (side === 'my') {
+        //         this.message.text = '恭喜你，己方队伍获得胜利!'
+        //         return;
+        //     }
+        //     this.message.text = '很遗憾，己方队伍溃败了！';
+        // })
+    }
 
-    gameStart() {
-        this._init();
-        this.app.stage.addChild(this.gameScene);
-        this.app.stage.addChild(this.gameOverScene);
+    
+
+    over = (name, cb) => {
+        // 指定结束场景
+        const sceneIndex = this.scenes.findIndex(scene => {
+            return scene.name === name;
+        });
+        if (sceneIndex === -1) {
+            console.error('没有找到该场景，请检查场景名称是否正确!')
+            return;
+        }
+        const scene = this.scenes.splice(sceneIndex, 1);
+        this.scenes.push(scene);
+        cb.apply(this, scene);
     }
 
     setBg = (bg) => {
@@ -41,69 +72,120 @@ class GameScene {
         target.appendChild(this.view);
     }
 
-
-    _init() {
-        this.gameScene = new Container();
-        this.gameOverScene = new Container();
-        this.app.renderer.backgroundColor = 0x061639;
-        this.view = this.app.view;
-        this.gameScene.visible = true;
-        this.gameOverScene.visible = false;
-        this.battleGround = new BattleGround(800, 600, { row: 5, col: 20 }, this.gameScene, this.gameOverScene);
+    // 创建一个Scene，根据回调创建或者直接传一个Scene,指定场景结束回调函数
+    makeScene(name, cb, isParticle) {
+        const scene = {
+            name: name, 
+            scene: new Container()
+        }
+        scene.scene.visible = false;
+        cb.call(this, scene.scene);
+        this.scenes.push(scene);
+        this.stage.addChild(scene.scene);
     }
 
-    initResource(my, enemy, src) {
-        this.enemyList = enemy;
-        this.myList = my;
-        this.definedLoad([
-            'static/images/cat.png',
-            'static/images/treasureHunter.json',
-            'static/images/testCharacter.json'
-        ], this.onProgress, () => {
-            //console.log(TextureCache);
-            console.log(resources);
-            const textures = resources['static/images/testCharacter.json'];
-            //创建对象
-            for (let enemy of this.enemyList) {
-                let enemys = this.createManageableSprite(enemy, textures);
-                if (enemys.length) {
-                    this.battleGround.addToGroup(enemys, 'enemy');
-                } else {
-                    return;
-                }
-            }
+    // 配置导演场景切换顺序
+    directSceneOrder(order) {
 
-            for (let me of this.myList) {
-                let mes = this.createManageableSprite(me, textures);
-                if (mes.length) {
-                    this.battleGround.addToGroup(mes, 'my');
-                } else {
-                    return;
-                }
-            }
-            this._initGameOverMessage();
-            // battleGround setting
-            this.battleGround.initGroup('my');
-            this.battleGround.addGroupToScene(true);
-            this.battleGround.battle();
-            this.battleGround.over((side) => {
-                if (side === 'my') {
-                    this.message.text = '恭喜你，己方队伍获得胜利!'
-                    return;
-                }
-                this.message.text = '很遗憾，己方队伍溃败了！';
-            })
+    }
+
+    getAllScenes() {
+        return this.scenes;
+    }
+
+    setBattleGround(width, heigth, layout) {
+        this.battleGround = new BattleGround(width, heigth, layout, this.scenes);
+    }
+
+    _init() {
+        // alias
+        this.scenes = [];
+        this.view = this.app.view;
+        this.renderer = this.app.renderer
+        this.stage = this.app.stage;
+        // main/start scene
+        const gameScene = new Container();
+        this.scenes.push({
+            name: 'GAME_START_FIRST_SCENE',
+            scene: gameScene
+        });
+        gameScene.visible = true;
+        this.stage.addChild(gameScene);
+    }
+
+
+    // 定制资源加载器
+    handleLoadProgress = (cb) => {
+        this._onProgress = cb.bind(this);
+    }
+
+    getTextures(textureName) {
+        return this.textures[textureName];
+    }
+
+    // 加载资源及其回调
+    load = (src, callback) => {
+        let SRC;
+        if (typeof callback === 'undefined') {
+            // 没有其他要加载的资源
+            callback = src;
+            SRC = [...DEFAULT_SOURCE_URL];
+        } else {
+            SRC = [...DEFAULT_SOURCE_URL, ...src];
+        }
+        this._definedLoad(SRC, this._onProgress, ()=> {
+            // 所有textures
+            this.textures = resources;
+            // 回调处理
+            callback.apply(this);
         })
     }
 
+    // Todo: 新建其他类型的士兵
+    makeSoldier(name) {
+
+    }
+
+    // 制定士兵
+    setSoldiers(friend, enemy) {
+        this.enemyList = enemy.soldiers;
+        this.myList = friend.soldiers;
+        // 设置内置兵种的url资源
+        const textures = this.textures['/images/testCharacter.json'];
+
+        if (!this.battleGround) {
+            console.error('请检查是否BattleGround对象没有初始化！。。。。');
+        }
+        // 
+        for (let _enemy of this.enemyList) {
+            let enemys = this._createManageableSprite(_enemy, textures);
+            if (enemys.length) {
+                this.battleGround.addToGroup(enemys, enemy['user']);
+            } else {
+                console.warn(enemy.user+'方不能没有士兵啊！')
+                return;
+            }
+        }
+
+        for (let me of this.myList) {
+            let mes = this._createManageableSprite(me, textures);
+            if (mes.length) {
+                this.battleGround.addToGroup(mes, friend['user']);
+            } else {
+                console.warn(friend.user+'方不能没有士兵啊！')
+                return;
+            }
+        }
+    }
+
     // 创建可管理精灵对象
-    createManageableSprite = ({ soldierType, count }, cache) => {
+    _createManageableSprite = ({ soldierType, count }, cache, maxNum = 100) => {
         let rt = [];
         if (Soldiers[soldierType]) {
-            let num = Math.ceil(count / 100);
+            let num = Math.ceil(count / maxNum);
             for (let i = 0; i < num; i++) {
-                let solider = new Soldiers[soldierType](cache, count >= 100 ? 100 : count);
-                count -= 100;
+                let solider = new Soldiers[soldierType](cache, count >= maxNum ? maxNum : count);
+                count -= maxNum;
                 // 加入数组
                 rt.push(solider);
             }
@@ -114,31 +196,9 @@ class GameScene {
         }
     }
 
-    _initGameOverMessage() {
-        let style = new TextStyle({
-            fontFamily: "Arial",
-            fontSize: 36,
-            fill: "white",
-            stroke: '#ff3300',
-            strokeThickness: 4,
-            dropShadow: true,
-            dropShadowColor: "#000000",
-            dropShadowBlur: 4,
-            dropShadowAngle: Math.PI / 6,
-            dropShadowDistance: 6,
-        });
-        this.message = new Text('', style);
-        const center = this.battleGround.getCenter();
-        this.message.anchor.set(0.5, 0.5);
-        this.message.position.set(center.x, center.y);
-        //this.message.pivot.set(this.message.width/2, this.message.height/2);
-        this.gameOverScene.addChild(this.message);
-    }
-
-    onProgress = (loader, resource) => {
-
+    // 默认加载的回调
+    _onProgress = (loader, resource) => {
         console.log("loading: " + resource.url);
-
         //Display the percentage of files currently loaded
         console.log("progress: " + loader.progress + "%");
         //If you gave your files names as the first argument
@@ -146,31 +206,16 @@ class GameScene {
         //console.log("loading: " + resource.name);
     }
 
-    definedLoad = (resources, progressHanlder, callback) => {
+    _definedLoad = (resources, progressHanlder, callback) => {
         if (!callback) {
             callback = progressHanlder
             progressHanlder = noop;
         }
-
         loader.add(resources)
             .on('progress', progressHanlder)
             .load(callback)
     }
-
-    getGameScene() {
-        return this.gameScene;
-    }
-
-    getGameOverScene() {
-        return this.gameOverScene;
-    }
 }
 
-
-class Scene {
-    constructor() {
-        this.scene = new Container();
-    }
-}
 
 export default GameScene
