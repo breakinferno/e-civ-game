@@ -1,7 +1,6 @@
 import Soldier from './Soldier'
 import * as PIXI from 'pixi.js'
 import noop from '@/utils/noop.js';
-import { arch } from 'os';
 export default class Archer extends Soldier {
     constructor(cache, blood) {
         super(cache, blood);
@@ -11,7 +10,6 @@ export default class Archer extends Soldier {
         this.SoldierType = "Archer";
         this.isShotType = true;
         this.init(Math.floor(Math.random()*800), Math.floor(Math.random()*600),true,()=>{
-            console.log('Archer');
         });
         // this.loadFrames(rowCount, colCount,[]) // 没有传frames组,cache为undefined时直接从指定文件夹加载
         // 以4*4加载帧图形

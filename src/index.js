@@ -1,6 +1,14 @@
 import * as PIXI from 'pixi.js';
-import BattleGround from './battleground'
-import Soldiers from './characters'
+import BG from './battleground'
+import Soldier from './characters'
+import noop from '@/utils/noop'
+import MAL from '@/utils/MakeAnimationLoop';
+// 客户端
+// const BattleGround = BG.client;
+// const Soldiers = Soldier.Soldier_client;
+// 服务端
+const BattleGround = BG.server;
+const Soldiers = Soldier.Soldier_server;
 
 let Application = PIXI.Application,
     Container = PIXI.Container,
@@ -38,18 +46,47 @@ class GameScene {
         this.battleGround.initGroup(side);
         this.battleGround.addGroupToScene(autoSize);
         this.battleGround.battle();
-        // this.battleGround.over((side) => {
-        //     if (side === 'my') {
-        //         this.message.text = '恭喜你，己方队伍获得胜利!'
-        //         return;
-        //     }
-        //     this.message.text = '很遗憾，己方队伍溃败了！';
-        // })
     }
 
-    
+    // 指定某个场景before, after, over回调
+    before = (name, cb) => {
+        const sceneIndex = this.scenes.findIndex(scene => {
+            return scene.name === name;
+        });
+        if (sceneIndex === -1) {
+            console.error('没有找到该场景，请检查场景名称是否正确!')
+            return;
+        }
+        const scene = this.scenes[sceneIndex];
+        scene.before = cb;
+    }
+
+    after = (name, cb) => {
+        const sceneIndex = this.scenes.findIndex(scene => {
+            return scene.name === name;
+        });
+        if (sceneIndex === -1) {
+            console.error('没有找到该场景，请检查场景名称是否正确!')
+            return;
+        }
+        const scene = this.scenes[sceneIndex];
+        scene.after = cb;
+    }
 
     over = (name, cb) => {
+        const sceneIndex = this.scenes.findIndex(scene => {
+            return scene.name === name;
+        });
+        if (sceneIndex === -1) {
+            console.error('没有找到该场景，请检查场景名称是否正确!')
+            return;
+        }
+        const scene = this.scenes[sceneIndex];
+        scene.over = cb;
+    }
+
+    // 指定结束场景及其回调
+    overScene = (name, pre, after, over) => {
         // 指定结束场景
         const sceneIndex = this.scenes.findIndex(scene => {
             return scene.name === name;
@@ -58,9 +95,12 @@ class GameScene {
             console.error('没有找到该场景，请检查场景名称是否正确!')
             return;
         }
-        const scene = this.scenes.splice(sceneIndex, 1);
+        const scene = this.scenes.splice(sceneIndex, 1)[0];
         this.scenes.push(scene);
-        cb.apply(this, scene);
+        // 绑定该场景结束回调
+        scene.over = over;
+        scene.before = pre;
+        scene.after = after;
     }
 
     setBg = (bg) => {
@@ -72,16 +112,40 @@ class GameScene {
         target.appendChild(this.view);
     }
 
+    repeatAt = (target) => {
+        const gs = _.cloneDeep(this);
+        target.appendChild(gs.view);
+    }
+
     // 创建一个Scene，根据回调创建或者直接传一个Scene,指定场景结束回调函数
-    makeScene(name, cb, isParticle) {
-        const scene = {
-            name: name, 
-            scene: new Container()
+    makeScene(name, cb, sceneOverCallback) {
+        let scene;
+        if (typeof cb === 'function') {
+            scene = {
+                name: name, 
+                scene: new Container(),
+                before: noop,
+                after: noop,
+                over: noop,
+                cb: cb
+            }
+        } else if (cb instanceof Container){
+            scene = {
+                name: name,
+                scene: cb,
+                before: noop,
+                after: noop,
+                over: noop
+            };
+        } else {
+            console.error('请输入正确的Scene对象！')
+            return;
         }
         scene.scene.visible = false;
-        cb.call(this, scene.scene);
         this.scenes.push(scene);
+        // this.battleGround.scenes.push(scene);
         this.stage.addChild(scene.scene);
+        // 回掉
     }
 
     // 配置导演场景切换顺序
@@ -93,8 +157,15 @@ class GameScene {
         return this.scenes;
     }
 
+    // 设置战场
     setBattleGround(width, heigth, layout) {
         this.battleGround = new BattleGround(width, heigth, layout, this.scenes);
+        this.battleGround.MAL = new MAL();
+    }
+
+    // 游戏帧率
+    setFPS(fps){
+        this.battleGround.MAL.setFPS(fps);
     }
 
     _init() {
@@ -147,7 +218,7 @@ class GameScene {
     }
 
     // 制定士兵
-    setSoldiers(friend, enemy) {
+    setSoldiers = (friend, enemy) => {
         this.enemyList = enemy.soldiers;
         this.myList = friend.soldiers;
         // 设置内置兵种的url资源

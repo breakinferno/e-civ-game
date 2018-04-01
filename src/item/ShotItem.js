@@ -3,6 +3,10 @@ import * as PIXI from 'pixi.js';
 import _ from 'lodash';
 import noop from '@/utils/noop.js';
 
+// 注意的只是飞行速度
+// 由于speed固定， 实际刷新率由loopTime决定，一秒默认400px
+
+
 class ShotItem {
     constructor(enemy, texture) {
         // console.log(enemy);

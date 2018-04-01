@@ -1,5 +1,12 @@
 import GameScene from '../src'
 import * as PIXI from 'pixi.js'
+// import fs from 'fs';
+// var fs  = require('fs');
+var path  = require('path');
+
+
+const fileName = 'try.json';
+
 var enemy = [{
     soldierType: 'Archer',
     count: 420
@@ -15,8 +22,26 @@ var my = [{
     count: 130
 }];
 
+
+const test1 = {
+    enemy: enemy,
+    my: my
+}
+
+const test2 = {
+    enemy: [{
+        soldierType: 'Archer',
+        count: 40
+    }],
+    my: [{
+        soldierType: 'ThiefHead',
+        count: 60
+    }]
+}
+
 document.addEventListener("DOMContentLoaded", function(event) {
     var target = document.getElementById('Test');
+    var other = document.getElementById('other');
     var gs = new GameScene();
     gs.mountAt(target);
     gs.setBattleGround(800, 600, {
@@ -26,7 +51,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     // 设置背景色
     gs.setBg(0x4f7dc4);
     // 创建结束场景
-    gs.makeScene('gameOver', (scene) => {
+    gs.makeScene('gameOver', (pre, scene) => {
         let style = new PIXI.TextStyle({
             fontFamily: "Arial",
             fontSize: 36,
@@ -39,7 +64,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
             dropShadowAngle: Math.PI / 6,
             dropShadowDistance: 6,
         });  
-        const message = new PIXI.Text('', style);
+        const txt = pre === 'my'?'恭喜你，我方赢了':'很遗憾,我方溃败!';
+        const message = new PIXI.Text(txt, style);
         const center = gs.battleGround.getCenter();
         message.anchor.set(0.5, 0.5);
         message.position.set(center.x, center.y);
@@ -48,20 +74,45 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     // gs.step()
 
-    // 结束后
-    gs.over('gameOver', ()=>{
+    
+    // 指定结束场景,及其回调
+    gs.overScene('gameOver', null, null, (result, scene, battleGround)=>{
+        console.log('所有的操作都在这里啦！')
+        // console.table(battleGround.actionFlows);
         console.log('gameOver 啦');
+        // localStorage.setItem('rt', JSON.stringify({
+        //         data: battleGround.actionFlows
+        //     })
+        // );
+        // 写入文件 不能引入fs模块
+        // fs.writeFile(path.join(__dirname, fileName), JSON.stringify({
+        //     data: battleGround.actionFlows
+        // }), (err) => {
+        //     if (err) {
+        //         throw err;
+        //     }
+        //     console.log('the file has been saved');
+        // })
     })
 
     gs.load(()=>{
+
         gs.setSoldiers({
-            soldiers: enemy, 
+            soldiers: test2.enemy,
             user: 'enemy'
-        }, 
-        {
-            soldiers: my, 
+        },{
+            soldiers: test2.my,
             user: 'my'
         });
+
+        // gs.setSoldiers({
+        //     soldiers: test1.enemy, 
+        //     user: 'enemy'
+        // }, 
+        // {
+        //     soldiers: test1.my, 
+        //     user: 'my'
+        // });
         gs.start('my');
     })
     // gs.initResource(my, enemy)

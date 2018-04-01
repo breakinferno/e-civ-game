@@ -1,5 +1,7 @@
-import Archer from './archer'
-import ThiefHead from './thiefHead'
+import Soldier_client from './client'
+import Soldier_server from './server'
 
 
-export default {Archer, ThiefHead}
+export default {
+    Soldier_client, Soldier_server
+}

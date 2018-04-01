@@ -7,6 +7,7 @@ const OpenBrowserPlugin = require('open-browser-webpack-plugin');
 module.exports = {
     context: __dirname,
     devtool: 'source-map',
+    // target: 'node',  //会爆global is not defined;
 　　entry: './test/test.js',
 　　output: {
 　　    path: path.resolve(__dirname, './dist'), //生成的文件存放目录
@@ -43,6 +44,9 @@ module.exports = {
             }
         ]
     },
+    // node: {
+    //     fs: "empty"
+    // },
     plugins: [
         new webpack.optimize.ModuleConcatenationPlugin(),
         new OpenBrowserPlugin({ url: 'http://localhost:8080/test/index.html' })

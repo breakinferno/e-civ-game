@@ -7,9 +7,9 @@
 // 护甲的减少伤害公式：100/（100+护甲值）
 import * as PIXI from 'pixi.js';
 import _ from 'lodash';
-import MakeAnimationLoop from '../utils/MakeAnimationLoop'
+import MakeAnimationLoop from '@/utils/MakeAnimationLoop'
 import noop from '@/utils/noop.js';
-import ShotItem from '../item/ShotItem';
+import ShotItem from '@/item/ShotItem';
 
 // const Rectangle = PIXI.Rectangle;
 
@@ -45,7 +45,7 @@ class Solider {
         // 状态设置
         // 动作状态
         this.animateState = {}; // 动画帧存储
-        this.actions = {}; // 动作效果回调函数存储
+        this.actionCallbacks = {}; // 动作效果回调函数存储
         this.actionTypes = ['MOVE@UP', 'MOVE@DOWN', 'MOVE@LEFT', 'MOVE@RIGHT']; // 注册的动作类型存储
         this.steps = []; // 该对象从开始到最后经历的动作集合
         this.maxStepLength = 50; // 默认最多的步骤为50步
@@ -116,8 +116,8 @@ class Solider {
             });
         }
 
-        // const message = new PIXI.Text(this.id, style);
-        // this.healthBar.addChild(message);
+        const message = new PIXI.Text(this.id, style);
+        this.healthBar.addChild(message);
     }
 
     // 制作血条
@@ -328,14 +328,14 @@ class Solider {
                 // 如果该对象是存活的
                 if (attacker.getLiveState()) {
                     attacker.stopAttack();
-                } else {
-                    attacker.die();
                 }
             });
             // 移除瞄准该对象的飞行物
             this.shotedBy.forEach(item => {
                 item.stopFly();
             });
+            // 给GameScene对象传递当前对象所做的所有操作
+            this.uploadAction(this.steps);
             // 移除
             this.destroy();
         });
@@ -439,7 +439,7 @@ class Solider {
 
     // 初始化动作函数
     initAction(actionName) {
-        this.actions[actionName] = noop;
+        this.actionCallbacks[actionName] = noop;
     }
 
     // 注册行为函数
@@ -487,7 +487,7 @@ class Solider {
         this.actionTypes.includes(name) ? null : this.actionTypes.push(name);
         // 注册其函数
         const actions = name.split('@');
-        let pointer = this.actions;
+        let pointer = this.actionCallbacks;
         const length = actions.length;
         for (let i = 0; i < length - 1; i++) {
             pointer = pointer[actions[i]];
@@ -533,7 +533,7 @@ class Solider {
         const actions = actionType.split('@');
         const actionFunc = actions.reduce((pre, next) => {
             return pre[next];
-        }, this.actions);
+        }, this.actionCallbacks);
         return actionFunc;
     }
 
@@ -548,14 +548,34 @@ class Solider {
         }
     }
 
+    // 上传执行过的动作,用于客户端检验
+    uploadAction = (actions) => {
+        this.BattleGround.receiveAction({
+            id: this.id,
+            actions: actions
+        })
+    }
+    
     // 针对每种行为制作其动画,子动画使用@链接,MOVE@UP
+    // 可能存在停止动画之后但是然后继续动画，但是此时操作一致导致不执行doAction逻辑代码
+    // 解决，设置
     doAction = (actionType, once, cb, reset = false) => {
         // 当前对象行为和上次一样则直接跳过逻辑，继续以当前状态运行
-        if (this.lastStep === actionType && !reset) {
+        if (!this.MAL.isStop && this.lastStep === actionType && !reset) {
             return;
         }
+        const rt = {
+            action: actionType,
+            position: this.getPosition(),
+            direction: this.direction,
+            once: once,
+            reset: reset,
+            enemy: actionType==='DEAD'?null:this.enemy.id,
+            sidePosition: this.enemy.getPosition()
+        }
+        // 上传步骤
         // 保存改步骤
-        this.steps.push(actionType);
+        this.steps.push(rt);
         // 占用的帧
         const frames = this._getFrames(actionType);
         // 调用的函数
@@ -636,7 +656,7 @@ class Solider {
             }
         }
         // 根据state(数据)映射到animateState(帧)和动作函数
-        recurse(state, this.animateState, this.actions, (val, base) => {
+        recurse(state, this.animateState, this.actionCallbacks, (val, base) => {
             let type = toString.call(val).slice(8, -1);
             let sequences = val;
             if (type === 'Array') {
@@ -889,6 +909,7 @@ class Solider {
         // }
         // this.doAction('MOVE@'+best);
         // return;
+
         // 是否是同一方向，这里采取的是如果上一次方向可用，则继续上一次方向，而不是随机方向
         // 导致人物走较长的折线
         const temp = this.lastStep.split('@');
@@ -898,14 +919,11 @@ class Solider {
         }
         const action = this.avaliableDirection[Math.floor(Math.random() * this.avaliableDirection.length)];
         //console.log(actions)
+        this.direction = action;
         action ? this.doAction('MOVE@'+action) : null;
     }
     // 获取位置
     getPosition() {
-        // return {
-        //     x: this.sprite.x,
-        //     y: this.sprite.y
-        // }
         return {
             x: this.displayEntity.x,
             y: this.displayEntity.y
