@@ -97,22 +97,22 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
     gs.load(()=>{
 
-        gs.setSoldiers({
-            soldiers: test2.enemy,
-            user: 'enemy'
-        },{
-            soldiers: test2.my,
-            user: 'my'
-        });
-
         // gs.setSoldiers({
-        //     soldiers: test1.enemy, 
+        //     soldiers: test2.enemy,
         //     user: 'enemy'
-        // }, 
-        // {
-        //     soldiers: test1.my, 
+        // },{
+        //     soldiers: test2.my,
         //     user: 'my'
         // });
+
+        gs.setSoldiers({
+            soldiers: test1.enemy, 
+            user: 'enemy'
+        }, 
+        {
+            soldiers: test1.my, 
+            user: 'my'
+        });
         gs.start('my');
     })
     // gs.initResource(my, enemy)

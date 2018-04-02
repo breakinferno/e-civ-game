@@ -3,9 +3,6 @@ import BG from './battleground'
 import Soldier from './characters'
 import noop from '@/utils/noop'
 import MAL from '@/utils/MakeAnimationLoop';
-import CONST_VALUE from '@/utils/ConstValue';
-
-const {SOLDIER_TEXTURES} = CONST_VALUE.SOLDIER;
 // 客户端
 // const BattleGround = BG.client;
 // const Soldiers = Soldier.Soldier_client;
@@ -210,8 +207,6 @@ class GameScene {
         this._definedLoad(SRC, this._onProgress, ()=> {
             // 所有textures
             this.textures = resources;
-            // 战场资源
-            this.battleGround.resources = resources;
             // 回调处理
             callback.apply(this);
         })
@@ -226,13 +221,15 @@ class GameScene {
     setSoldiers = (friend, enemy) => {
         this.enemyList = enemy.soldiers;
         this.myList = friend.soldiers;
+        // 设置内置兵种的url资源
+        const textures = this.textures['/images/testCharacter.json'];
 
         if (!this.battleGround) {
             console.error('请检查是否BattleGround对象没有初始化！。。。。');
         }
         // 
         for (let _enemy of this.enemyList) {
-            let enemys = this._createManageableSprite(_enemy);
+            let enemys = this._createManageableSprite(_enemy, textures);
             if (enemys.length) {
                 this.battleGround.addToGroup(enemys, enemy['user']);
             } else {
@@ -242,7 +239,7 @@ class GameScene {
         }
 
         for (let me of this.myList) {
-            let mes = this._createManageableSprite(me);
+            let mes = this._createManageableSprite(me, textures);
             if (mes.length) {
                 this.battleGround.addToGroup(mes, friend['user']);
             } else {
@@ -253,12 +250,12 @@ class GameScene {
     }
 
     // 创建可管理精灵对象
-    _createManageableSprite = ({ soldierType, count }, maxNum = 100) => {
+    _createManageableSprite = ({ soldierType, count }, cache, maxNum = 100) => {
         let rt = [];
         if (Soldiers[soldierType]) {
             let num = Math.ceil(count / maxNum);
             for (let i = 0; i < num; i++) {
-                let solider = new Soldiers[soldierType](count >= maxNum ? maxNum : count,  this.battleGround);
+                let solider = new Soldiers[soldierType](cache, count >= maxNum ? maxNum : count);
                 count -= maxNum;
                 // 加入数组
                 rt.push(solider);

@@ -1,8 +1,8 @@
 import Soldier from './Soldier';
 
 export default class ThiefHead extends Soldier {
-    constructor(cache, blood) {
-        super(cache, blood);
+    constructor(blood, BattleGround) {
+        super(blood, BattleGround);
         this.primarity = 3;
         this.SoldierType = "ThiefHead";
         this.init(Math.floor(Math.random()*800), Math.floor(Math.random()*600), true,()=>{});

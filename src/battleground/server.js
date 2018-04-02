@@ -209,6 +209,9 @@ export default class BattleGround {
         this.ys = y / this.layout.row;
     }
 
+    battleOver = () => {
+        this.MAL.stop();
+    }
 
     // 清理战场
     clearBattleGround = (side) => {
@@ -216,10 +219,10 @@ export default class BattleGround {
             console.log('清理战场中...');
             // 停止所有动作
             this.children.forEach(child=>{
-                child.stop();
                 // 强制上传其动作
                 child.uploadAction(child.steps);
-            })
+            });
+            this.battleOver();
             // typeof this.overCB === 'function'?this.overCB(side):null;
             console.log('战场打扫完毕！');
             // 下一个场景
@@ -305,7 +308,6 @@ export default class BattleGround {
             child.enemy = randEnemy;
             // 该目标对象保存攻击者，以便于自己死亡时通知攻击者更改目标对象
             randEnemy.attackedBy.push(child);
-            child.enemyQuene.push(randEnemy.id);
         }
 
         // 判断是否可以攻击
@@ -325,11 +327,11 @@ export default class BattleGround {
             return;
         }
         // 判断是否可以移动，并且决定移动方向
-        this.judgeMove(child);
+        this.judgeMove(child, child.enemy);
     }
 
     // 注册动画
-    _registAnimation = (child) => {
+    registAnimation = (child) => {
         this.MAL.subscribe(child);
     }
 
@@ -337,11 +339,10 @@ export default class BattleGround {
     addToGroup = (children, groupName) => {
         // 将每个对象的战场对象注册为本对象
         children.forEach((child, index) => {
-            child.BattleGround = this;
             child.id = groupName+'@'+child.SoldierType[0]+'@'+index;
             child.setGroup(groupName);
             // 注册MAL对象
-            this._registAnimation(child);
+            this.registAnimation(child);
         })
         // 加入this.children数组
         children.reduce((target, child) => {
@@ -356,7 +357,7 @@ export default class BattleGround {
     addChild(child) {
         child.BattleGround = this;
         this.children.push(child);
-        this._registAnimation(child);
+        this.registAnimation(child);
     }
 
     // 移除对象

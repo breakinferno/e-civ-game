@@ -10,26 +10,24 @@ import _ from 'lodash';
 import FramesLoader from '@/utils/FramesLoader';
 import noop from '@/utils/noop.js';
 import ShotItem from '@/item/ShotItem';
+import CONST_VALUE from '@/utils/ConstValue';
 
-// const Rectangle = PIXI.Rectangle;
-
-const HEALTH_WIDTH = 30;
-const HEALTH_HEIGHT = 3;
+const {SOLDIER_TEXTURES, HEALTH_HEIGHT, HEALTH_WIDTH, SECEND_STEP_LENGTH} = CONST_VALUE.SOLDIER;
+// 决定速度的，每秒的补偿,
+// SecondStepLength/FPS == speedX/Y;
 
 class Solider {
     static primarity = 0;
     static SoldierType = 'Soldier';
 
     // cache 为空时在loadFrames中指定帧来源，为对象
-    constructor(cache, blood) {
+    constructor(blood, BattleGround) {
+        this.BattleGround = BattleGround;
         // 生命值
         this.blood = blood;
         this.maxBlood = blood;
         // 攻击范围
         this.attackArea = 1;
-        // 移动速度
-        this.speedX = 10;
-        this.speedY = 10;
         // 攻击力
         this.ATK = 10;
         // 防御力
@@ -39,14 +37,10 @@ class Solider {
         // 精灵图标
         this.sprite = new PIXI.Sprite();
         this.displayEntity = new PIXI.Container();
-        this.cache = cache ? cache : null;
         // 方向
         this.direction = 'RIGHT';
         // 状态设置
         // 动作状态
-        this.animateState = {}; // 动画帧存储
-        this.actionCallbacks = {}; // 动作效果回调函数存储
-        this.actionTypes = ['MOVE@UP', 'MOVE@DOWN', 'MOVE@LEFT', 'MOVE@RIGHT']; // 注册的动作类型存储
         this.steps = []; // 该对象从开始到最后经历的动作集合
         this.maxStepLength = 50; // 默认最多的步骤为50步
         this.lastStep = ''; // 上一步
@@ -75,10 +69,18 @@ class Solider {
     }
 
     _init() {
+        // 动画管理对象
+        this.FramesLoader = new FramesLoader(this.sprite);
+        this.FramesLoader.owner = this;
+        // 加载资源
+        this.FramesLoader.setResources(this.BattleGround.resources[SOLDIER_TEXTURES]);
+        // 状态
+        this.initSpeed();
         this._createBloodState(this.blood);
         this.displayEntity.addChild(this.sprite);
         this.displayEntity.addChild(this.healthBar);
     }
+
 
     setGroup =(group) => {
         let style;
@@ -196,6 +198,7 @@ class Solider {
         let initWidth, initHeight;
         // shot fly
         const shotItem = new ShotItem(enemy);
+        this.BattleGround.registAnimation(shotItem);
         // shotItem.setDirection(this.direction);
         const scene = this.BattleGround.getScene();
         shotItem.addToScene(scene);
@@ -223,8 +226,8 @@ class Solider {
         default:
             console.log('方向有误');
         }
-        shotItem.init(frames, initWidth, initHeight);
-        shotItem.fly(this._hit);
+        shotItem.init(frames, initWidth, initHeight, this._hit);
+        // shotItem.fly(this._hit);
     }
 
     // 射击类间接伤害
@@ -260,6 +263,7 @@ class Solider {
     // 停止攻击
     // 停止内部循环函数
     stopAttack() {
+        console.log('stop attack');
     }
 
     attack = (enemy) => {
@@ -300,6 +304,10 @@ class Solider {
         return this.sprite;
     }
 
+    _getFrames = (action) => {
+        return this.FramesLoader._getCacheFrames(action);
+    }
+
     setLiveState(state) {
         this.isLive = state;
     }
@@ -314,10 +322,6 @@ class Solider {
     // A的死亡过程被终止
     die = () => {
         this.doAction('DEAD', true, ()=>{
-            // console.log( this.SoldierType + ' '+ this.id + ' died!...');
-            // const bg = this.BattleGround;
-            // console.log('my方还有%s个人，enemy方还有%s个人!', bg['groups']['my'].length, bg['groups']['enemy'].length);
-            // console.log('经历的动作有:'+this.steps);
             // 移除攻击者目标
             this.attackedBy.forEach(attacker => {
                 attacker.enemy = null;
@@ -331,7 +335,7 @@ class Solider {
                 item.stopFly();
             });
             // 给GameScene对象传递当前对象所做的所有操作
-            this.uploadAction(this.steps);
+            // this.uploadAction(this.steps);
             // 移除
             this.destroy();
         });
@@ -346,8 +350,9 @@ class Solider {
     }
 
     initSpeed() {
-        this.speedX = 10;
-        this.speedY = 10;
+        const {FPS} = this.BattleGround.MAL;
+        this.speedX = SECEND_STEP_LENGTH/FPS;
+        this.speedY = SECEND_STEP_LENGTH/FPS;
     }
 
     setSpeed(x, y) {
@@ -373,13 +378,6 @@ class Solider {
         if (pix) {
             this.setSpeed(this.speedX, pix);
         }
-        // const bounds = this.BattleGround.getChildForbiddenDirection(this);
-        // // 如果不允许往上走则向其他方向移动
-        // if (bounds.includes(DIRECTION)) {
-        //     this.moveRight();
-        //     return this;
-        // }
-        //this.sprite.y -= this.speedY;
         this.displayEntity.y -= this.speedY;
         this.turnTo('UP');
     }
@@ -389,13 +387,6 @@ class Solider {
         if (pix) {
             this.setSpeed(this.speedX, pix);
         }
-        // const bounds = this.BattleGround.getChildForbiddenDirection(this);
-        // // 如果不允许往上走则向其他方向移动
-        // if (bounds.includes(DIRECTION)) {
-        //     this.moveLeft();
-        //     return this;
-        // }
-        // this.sprite.y += this.speedY;
         this.displayEntity.y += this.speedY;
         this.turnTo('DOWN');
     }
@@ -405,13 +396,6 @@ class Solider {
         if (pix) {
             this.setSpeed(pix, this.speedY);
         }
-        // const bounds = this.BattleGround.getChildForbiddenDirection(this);
-        // // 如果不允许往上走则向其他方向移动
-        // if (bounds.includes(DIRECTION)) {
-        //     this.moveUP();
-        //     return this;
-        // }
-        //this.sprite.x -= this.speedX;
         this.displayEntity.x -= this.speedX;
         this.turnTo('LEFT');
     }
@@ -421,13 +405,6 @@ class Solider {
         if (pix) {
             this.setSpeed(pix, this.speedY);
         }
-        // const bounds = this.BattleGround.getChildForbiddenDirection(this);
-        // // 如果不允许往上走则向其他方向移动
-        // if (bounds.includes(DIRECTION)) {
-        //     this.moveDown();
-        //     return this;
-        // }
-        // this.sprite.x += this.speedX;
         this.displayEntity.x += this.speedX;
         this.turnTo('RIGHT');
     }
@@ -479,24 +456,14 @@ class Solider {
 
     // 以后考虑move,up而不是move@up
     _setAction(name, callback) {
-        // 注册该动作
-        this.actionTypes.includes(name) ? null : this.actionTypes.push(name);
-        // 注册其函数
-        const actions = name.split('@');
-        let pointer = this.actionCallbacks;
-        const length = actions.length;
-        for (let i = 0; i < length - 1; i++) {
-            pointer = pointer[actions[i]];
-        }
-        pointer[actions[length - 1]] = callback;
+        this.FramesLoader.registerAction(name, callback);
         return this;
     }
 
     // 人物静止
     stop = () => {
-        //  console.log('character stop action')
-        clearInterval(this.timer);
-        // 停止动作
+        // 取消订阅
+        this.MAL.cancelSubscribe(this);
     }
 
     // 人物运动循环，激活人物
@@ -506,28 +473,9 @@ class Solider {
             return console.error('该对象没有加载到BattleGround对象上')
         }
         // 时间可能存在一点问题，存在补足或者缺失问题.
-        this.timer = setInterval(() => {
-            this.BattleGround.makeChildrenActive(this);
-        }, 10)
+        this.BattleGround.makeChildrenActive(this);
     }
 
-    // 获取帧数组
-    _getFrames(actionType) {
-        const actions = actionType.split('@');
-        const frames = actions.reduce((pre, next) => {
-            return pre[next];
-        }, this.animateState);
-        return frames;
-    }
-
-    // 获取帧回调
-    _getActionFunc(actionType) {
-        const actions = actionType.split('@');
-        const actionFunc = actions.reduce((pre, next) => {
-            return pre[next];
-        }, this.actionCallbacks);
-        return actionFunc;
-    }
 
     // 获取自己的矩形
     getArea() {
@@ -548,121 +496,35 @@ class Solider {
         })
     }
     
-    // 针对每种行为制作其动画,子动画使用@链接,MOVE@UP
-    // 可能存在停止动画之后但是然后继续动画，但是此时操作一致导致不执行doAction逻辑代码
-    // 解决，设置
+
+    // 每帧都doAction
     doAction = (actionType, once, cb, reset = false) => {
-        // 当前对象行为和上次一样则直接跳过逻辑，继续以当前状态运行
-        if (!this.MAL.isStop && this.lastStep === actionType && !reset) {
-            return;
-        }
-        const rt = {
-            action: actionType,
-            position: this.getPosition(),
-            direction: this.direction,
-            once: once,
-            reset: reset,
-            enemy: actionType==='DEAD'?null:this.enemy.id,
-            sidePosition: this.enemy.getPosition()
-        }
-        // 上传步骤
-        // 保存改步骤
-        this.steps.push(rt);
-        // 占用的帧
-        const frames = this._getFrames(actionType);
-        // 调用的函数
-        const actionFunc = this._getActionFunc(actionType);
-        // 讨论类型
-        const type = toString.call(frames).slice(8, -1);
-
-        if (!frames) {
-            console.log('哈哈这里有问题了，来看看吧');
-        }
-
         this.lastStep = actionType;
-        type === 'Array' ?
-            (once ? this.MAL.animateOnce(actionType, frames, actionFunc, cb) : this.MAL.animate(actionType, frames, actionFunc, cb)) :
-            this.MAL.changeFrame(frames, actionFunc);
+        // 如果强制重置
+        if (reset) {
+            this.FramesLoader.resetActionFrame();
+        }
+        // 加载指定帧及其回调
+        this.FramesLoader.loadActionFrame(actionType, cb);
         return this;
     }
 
-    // 改变当前精灵的贴图
-    // 可指定雪碧图中某个特定的帧
-    // 也可指定state中某个子帧集中某个特别的帧
-    changeFrame(actionType, id) {
-        const actions = actionType.split('@');
-        const frames = actions.reduce((pre, next) => {
-            return pre[next];
-        }, this.animateState);
-        // 做个输入参数的判断吧
-        const type = toString.call(frames).slice(8, -1);
-        if (type === 'Array') {
-            id ? this.FramesLoader.changeFrame(frames[id]) : console.error('请输入指定的帧数id');
-        }
-
-        if (type === 'Object') {
-            frames instanceof PIXI.Texture ? this.FramesLoader.changeFrame(frames) : console.error('请输入正确的行为参数');
-        }
-    }
     // 加载帧
     // frames为路径数组或者路径或者undefined(此时必须制定src),
     // 所以只有两种情况，frames有时srcID没有值, frames没有值时，srcID有值
     loadFrames(actionType, rowNum = 1, colNum = 1, frames, srcID) {
-        //this.MAL.loadFrames
-        let loadedFrames;
-        // const type = toString.call(frames).slice(8, -1);
-        const actions = actionType.split('.');
-        if (frames) {
-            loadedFrames = this.FramesLoader.loadFrames(frames, rowNum, colNum);
-            actions.forEach(action => {
-                this.animateState[action] = {};
-                this.animateState[action]['base'] = loadedFrames;
-            })
-        } else {
-            loadedFrames = this.FramesLoader.loadFrames(this.cache, rowNum, colNum, srcID);
-            actions.forEach(action => {
-                this.animateState[action] = {};
-                this.animateState[action]['base'] = loadedFrames;
-            })
-        }
+        this.FramesLoader.loadActionFramesFromResource(actionType, rowNum, colNum, frames, srcID);
         return this;
     }
 
     // state制定每个动作所需要的动画帧
     setState(callback) {
         const state = callback.call(this, this);
-        const FramesLoader = this.FramesLoader;
-
-        function recurse(obj, dist, actions, mapFunc) {
-            for (let key of Object.keys(obj)) {
-                let type = toString.call(obj[key]).slice(8, -1);
-                if (type === 'Object') {
-                    dist[key] = { ...dist[key]};
-                    actions[key] = {};
-                    recurse(obj[key], dist[key], actions[key], mapFunc);
-                } else {
-                    actions[key] = noop;
-                    dist[key] = mapFunc(obj[key], typeof dist.base !== 'undefined'?dist.base:dist[key].base);
-                }
-            }
-        }
-        // 根据state(数据)映射到animateState(帧)和动作函数
-        recurse(state, this.animateState, this.actionCallbacks, (val, base) => {
-            let type = toString.call(val).slice(8, -1);
-            let sequences = val;
-            if (type === 'Array') {
-                sequences = {
-                    start: val[0],
-                    end: val[1]
-                }
-                return FramesLoader.getSequenceFrames([sequences], base);
-            }
-            return FramesLoader.getSequenceFrames([sequences], base)[0];
-        })
+        this.FramesLoader.loadActionFramesFromState(state);
 
         // 初始化动作函数
         // 初始化INIT
-        this.sprite.texture = this.animateState['INIT'];
+        this.sprite.texture = this.FramesLoader.getActionFrame('INIT');
         this._update();
         this.setAction('MOVE@UP', (archer)=>{
             archer.moveUP();
@@ -696,9 +558,6 @@ class Solider {
     // 指定初始化帧，指定精灵位置，指定精灵交互情况,如果你有特定的初始帧可以在回调函数中
     // 指定，否则输入帧序数，该初始化会在loadFrames之后进行
     init(x, y, interactiveable, callback) {
-        // 动画管理对象
-        this.FramesLoader = new FramesLoader(this.sprite);
-        this.FramesLoader.owner = this;
         // 初始化精灵
         this.setPosition(x, y);
         // 相应事件
@@ -884,22 +743,6 @@ class Solider {
             this.doAction(this.actionTypes[Math.floor(Math.random() * this.actionTypes.length)]);
             return;
         }
-        // 优化路径
-        // let best;
-        // const prefer = this._judgeShortestDirection(dest);
-        // this.avaliableDirection.forEach(direction => {
-        //     // 有优化的选择
-        //     if (prefer.includes(direction)) {
-        //         best = direction;
-        //     }
-        // })
-
-        // if (best === this.lastStep) {
-        //     this.doAction(this.lastStep);
-        //     return;
-        // }
-        // this.doAction('MOVE@'+best);
-        // return;
 
         // 是否是同一方向，这里采取的是如果上一次方向可用，则继续上一次方向，而不是随机方向
         // 导致人物走较长的折线

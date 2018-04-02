@@ -2,8 +2,8 @@ import Soldier from './Soldier'
 import * as PIXI from 'pixi.js'
 import noop from '@/utils/noop.js';
 export default class Archer extends Soldier {
-    constructor(cache, blood) {
-        super(cache, blood);
+    constructor(blood, BattleGround) {
+        super(blood, BattleGround);
         this.primarity = 0;
         this.attackArea = 6;
         this.ATK = 5;

@@ -2,36 +2,27 @@
 import * as PIXI from 'pixi.js';
 import _ from 'lodash';
 import noop from '@/utils/noop.js';
-import CONST_VALUE from '@/utils/ConstValue'
-const {FLY_STEP_LENGTH} = CONST_VALUE.SHOTITEM;
+
 // 注意的只是飞行速度
+// 由于speed固定， 实际刷新率由loopTime决定，一秒默认400px
+
 
 class ShotItem {
     constructor(enemy, texture) {
         // console.log(enemy);
         this.enemy = enemy;
-        this.canFly = true;
         this._init(texture);
-        this.stepLenth = FLY_STEP_LENGTH;
+        this.speed = 4;
         this.vx = 0;
         this.vy = 0;
         // 角度,这里tan值
         this.angel = 0;
+        this.loopTime = 10;
         // 大致的方向
         this.direction = 'RIGHT';   // 
         this.directions = ['UP', 'LEFT', 'RIGHT', 'DOWN'];
     }
 
-    getFPS = () => {
-        return this.MAL.FPS;
-    }
-
-    // 动画接口
-    active = () => {
-        if (this.canFly) {
-            this.fly();
-        }
-    }
 
     setDirection = (direction) => {
         const type = toString.call(direction).slice(8, -1);
@@ -47,11 +38,11 @@ class ShotItem {
         // }
     }
 
-    init = (frame, x, y, hitCallback) => {
+    init = (frame, x, y) => {
         this.setTexture(frame);
         this._setPosition(x, y);
         this.sprite.visible = true;
-        this._hitCallback = hitCallback;
+
     }
 
     // 将该对象加入容器中
@@ -72,11 +63,11 @@ class ShotItem {
         }
     }
 
-    // // 设置速度
-    // setSpeed(speed) {
-    //     this.speed = speed;
-    //     this._setSpeed(this.angel);
-    // }
+    // 设置速度
+    setSpeed(speed) {
+        this.speed = speed;
+        this._setSpeed(this.angel);
+    }
 
     _init(texture) {
         this.sprite = new PIXI.Sprite();
@@ -84,9 +75,10 @@ class ShotItem {
     }
 
     // 飞行函数，回调用于击中目标之后运行
-    fly = (outOfBounds) => {
+    fly = (callback, outOfBounds) => {
+        this._hitCallback = callback;    
         this._outBounds = outOfBounds;
-        this._fly();
+        this.timer = setInterval(this._fly, this.loopTime);
     }
 
     getSprite() {
@@ -96,16 +88,11 @@ class ShotItem {
     // 击中敌人停止飞行
     // 敌人死亡停止飞行
     stopFly(){
-        if (this.canFly) {
-            // 清除该对象及其引用
-            // code here
-            this.sprite.visible = false;
-            // 清除定时器
-            this.canFly = false;
-            this.MAL.cancelSubscribe(this);
-        } else {
-            console.log('the fly item already stop');
-        }
+        // 清除该对象及其引用
+        // code here
+        this.sprite.visible = false;
+        // 清除定时器
+        clearInterval(this.timer);
     }
 
     // 是否越界
@@ -147,7 +134,6 @@ class ShotItem {
     // 根据角度决定vx,vy
     _setSpeed = (dx = 0, dy = 0) => {
         const tan = dy/dx;
-        this.speed = this.stepLenth / this.getFPS();
         const pow = Math.pow(tan, 2);
         this.vx = Math.sqrt(1/(1+pow)) * this.speed;
         this.vy = Math.sqrt(1/(1+1/pow)) * this.speed;

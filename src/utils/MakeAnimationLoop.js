@@ -9,7 +9,9 @@
 import * as PIXI from 'pixi.js';
 import _ from 'lodash';
 import noop from './noop'
+import item from '@/item'
 
+const ShotItem = item.ShotItem;
 const INTERVAL = 1000; // 一秒
 
 
@@ -40,10 +42,10 @@ const INTERVAL = 1000; // 一秒
 
 
 export default class AnimationManager {
-    constructor() {
+    constructor(FPS = 10) {
         // 管理对象
         this.subscribers = [];
-        this.FPS = 60;
+        this.FPS = FPS;
         this.isStop = false;
     }
 
@@ -51,6 +53,22 @@ export default class AnimationManager {
     subscribe = (child) => {
         child.MAL = this;
         this.subscribers.push(child);
+    }
+
+
+    // 取消动画订阅
+    cancelSubscribe = (child) => {
+        //test
+        // const shotItems = this.subscribers.filter(subscriber => {
+        //     return subscriber instanceof ShotItem;
+        // })
+        // console.log('这里还有'+shotItems.length+'只见');
+
+        const index = this.subscribers.findIndex(subscriber => {
+            return subscriber.id === child.id;
+        });
+
+        this.subscribers.splice(index, 1);
     }
 
     // 逐帧动画
@@ -68,6 +86,7 @@ export default class AnimationManager {
     }
 
     // 每个订阅者动画
+    // 订阅者必须实现active接口
     _subscribeAnimate = (subscriber) => {
         subscriber.active();
     }
@@ -97,19 +116,6 @@ export default class AnimationManager {
         }
     }
 
-
-    getFrames() {
-        return this.frames
-    }
-
-    getCurentFrameId() {
-        return this.currentFrame
-    }
-
-    getCurentFrame() {
-        return this.frames[this.currentFrame];
-    }
-
     getFPS() {
         return this.FPS;
     }
@@ -123,6 +129,6 @@ export default class AnimationManager {
             return;
         }
         this.isStop = true;
-        this.timer?window.cancelRequestAnimFrame(this.timer):null;
+        this.timer?window.cancelAnimationFrame(this.timer):null;
     }
 }
