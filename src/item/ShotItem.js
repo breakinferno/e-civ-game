@@ -225,6 +225,10 @@ class ShotItem {
         this.sprite.rotation = this.angel;
     }
 
+    getAngel(){
+        return this.angel
+    }
+
     // 获取旋转角度
     _getRotation = (width, height) =>{
         return width?Math.atan(height/width):0;
@@ -267,6 +271,10 @@ class ShotItem {
             width: this.sprite.width,
             height: this.sprite.height
         }
+    }
+
+    getDirection() {
+        return this.direction;
     }
 
     _setPosition(x = 0, y = 0) {

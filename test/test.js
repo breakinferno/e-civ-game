@@ -80,10 +80,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
         console.log('所有的操作都在这里啦！')
         // console.table(battleGround.actionFlows);
         console.log('gameOver 啦');
-        // localStorage.setItem('rt', JSON.stringify({
-        //         data: battleGround.actionFlows
-        //     })
-        // );
+        localStorage.setItem('rt', JSON.stringify({
+                data: battleGround.actionFlows
+            })
+        );
         // 写入文件 不能引入fs模块
         // fs.writeFile(path.join(__dirname, fileName), JSON.stringify({
         //     data: battleGround.actionFlows

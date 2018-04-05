@@ -2,16 +2,16 @@ import * as PIXI from 'pixi.js';
 import BG from './battleground'
 import Soldier from './characters'
 import noop from '@/utils/noop'
-import MAL from '@/utils/MakeAnimationLoop';
+import MAL, {SERVER, CLIENT} from '@/utils/MakeAnimationLoop';
 import CONST_VALUE from '@/utils/ConstValue';
-
 const {SOLDIER_TEXTURES} = CONST_VALUE.SOLDIER;
+
 // 客户端
-// const BattleGround = BG.client;
-// const Soldiers = Soldier.Soldier_client;
+const BattleGround = BG.client;
+const Soldiers = Soldier.Soldier_client;
 // 服务端
-const BattleGround = BG.server;
-const Soldiers = Soldier.Soldier_server;
+// const BattleGround = BG.server;
+// const Soldiers = Soldier.Soldier_server;
 
 let Application = PIXI.Application,
     Container = PIXI.Container,
@@ -163,12 +163,11 @@ class GameScene {
     // 设置战场
     setBattleGround(width, heigth, layout) {
         this.battleGround = new BattleGround(width, heigth, layout, this.scenes);
-        this.battleGround.MAL = new MAL();
     }
 
     // 游戏帧率
     setFPS(fps){
-        this.battleGround.MAL.setFPS(fps);
+        this.battleGround.setFPS(fps);
     }
 
     _init() {

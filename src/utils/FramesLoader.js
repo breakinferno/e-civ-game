@@ -94,6 +94,7 @@ export default class FramesLoader {
         }
     }
 
+    // 进入下一帧
     _stepToNextFrame = (action) => {
         // 改变帧
         this.changeFrame(this.cacheFrames[this.currentFrameIndex]);
@@ -134,7 +135,7 @@ export default class FramesLoader {
     resetActionFrame = () => {
         this.currentAction = '';
         // 新的动作
-        console.log('你重置动画帧了');
+        // console.log('你重置动画帧了');
     }
 
     /**
@@ -171,7 +172,9 @@ export default class FramesLoader {
         }
     }
 
-
+    getAction() {
+        return this.currentAction;
+    }
 
     getFrames() {
         return this.frames

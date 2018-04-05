@@ -1,17 +1,13 @@
+
 // 该对象设计主要用于检测浏览器窗口变化和管理游戏界面的尺寸比例
 // 仲裁各个对象的行为和状态，类似于一个管理器
 import _ from 'lodash';
 import * as PIXI from 'pixi.js';
 import Bump from 'bump.js'
-
-const TEST_CHILD = 'enemy@T@1';
-
+import MakeAnimationLoop, {CLIENT} from '@/utils/MakeAnimationLoop';
 
 export default class BattleGround {
-    constructor(x = 800, y = 600, layout = {
-        col: 30,
-        row: 40
-    }, scenes = []) {
+    constructor(x = 800, y = 600, layout = { col: 30, row: 40 }, scenes = []) {
         this.currentSceneIndex = 0;
         this.currentScene = scenes[this.currentSceneIndex];
         this.scenes = scenes;
@@ -36,6 +32,12 @@ export default class BattleGround {
         this.preResult = null;
         // 所有士兵的操作流程
         this.actionFlows = [];
+        this.MAL = new MakeAnimationLoop(10, CLIENT);
+        this.MAL.holder = this;
+    }
+
+    setFPS(FPS){
+        this.MAL.setFPS(FPS);
     }
 
     setSceneVisible(scene) {
@@ -50,14 +52,14 @@ export default class BattleGround {
         // 当前场景消失
         this.setSceneFade(this.currentScene);
         // 加载下一个场景
-        typeof scene.before === 'function' ? scene.before.call(scene, this.preResult, scene.scene, this) : null;
+        typeof scene.before === 'function'?scene.before.call(scene, this.preResult, scene.scene, this):null;
         // 下一个场景传递参数
         if (typeof scene.cb === 'function') {
             scene.cb.call(scene.scene, this.preResult, scene.scene, this);
         }
-        scene.scene.visible = true;
-        typeof scene.after === 'function' ? scene.after.call(scene, this.preResult, scene.scene, this) : null;
-        typeof scene.over === 'function' ? scene.over.call(scene, this.preResult, scene.scene, this) : null;
+        scene.scene.visible = true;    
+        typeof scene.after === 'function'?scene.after.call(scene, this.preResult, scene.scene, this):null;
+        typeof scene.over === 'function'?scene.over.call(scene, this.preResult, scene.scene, this):null;
 
     }
 
@@ -122,15 +124,11 @@ export default class BattleGround {
         const isLandScope = true;
         let boardMap = isLandScope ? (val) => {
             // 默认为横版
-            const {
-                row
-            } = this.layout;
+            const { row } = this.layout;
             const rt = [(val % row + row - 1) % row, Math.floor((val - 1) / row)];
             return rt;
         } : (val) => {
-            const {
-                col
-            } = this.layout;
+            const { col } = this.layout;
             return [Math.floor((val - 1) / col), (val % col - 1 + col) % col];
         }
         // 列数
@@ -180,39 +178,21 @@ export default class BattleGround {
 
     battle = () => {
         //this.makeChildrenActive();
-        this.children.forEach(child => {
-            // 获取child 的 动作
-            child.actions = this._getChildActions(child);
-            child.nowAction = child.actions[0];
-            // 每个人物激活
-            child.active();
-            // child.moveTo(this.getCenter());
-        });
+        this.MAL.animate();
         console.log('battle start');
     }
 
     // 将所有子对象加载到场景中
     addChildToScene(child, fittable) {
         if (fittable) {
-            const {
-                sprite
-            } = child;
-            const {
-                height,
-                width
-            } = sprite;
-            const {
-                ys,
-                xs
-            } = this;
+            const { sprite } = child;
+            const { height, width } = sprite;
+            const { ys, xs } = this;
             sprite.scale.x = xs / width;
             sprite.scale.y = ys / height;
             //sprite.anchor.set(0.5, 0.5);
         }
-        const {
-            width,
-            height
-        } = this.getBoxSize();
+        const { width, height } = this.getBoxSize();
         child.unitX = width;
         child.unitY = height;
         child.addToScene(this.gameScene);
@@ -234,19 +214,8 @@ export default class BattleGround {
         this.ys = y / this.layout.row;
     }
 
-    // test
-    moveRandom = (target) => {
-        const actionType = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
-        const prefix = 'MOVE';
-        // target.doAction('MOVE@UP');
-        setInterval(() => {
-            const bounds = [...this._judgeBounds(target)];
-            const avaliableDirection = actionType.filter(action => {
-                return !bounds.includes(action)
-            })
-            // console.log(avaliableDirection);
-            target.doAction(`${prefix}@${avaliableDirection[Math.floor(Math.random() * avaliableDirection.length)]}`);
-        }, 1000);
+    battleOver = () => {
+        this.MAL.stop();
     }
 
     // 清理战场
@@ -254,11 +223,11 @@ export default class BattleGround {
         if (this.isBattleOver === 1) {
             console.log('清理战场中...');
             // 停止所有动作
-            this.children.forEach(child => {
-                child.stop();
+            this.children.forEach(child=>{
                 // 强制上传其动作
                 child.uploadAction(child.steps);
-            })
+            });
+            this.battleOver();
             // typeof this.overCB === 'function'?this.overCB(side):null;
             console.log('战场打扫完毕！');
             // 下一个场景
@@ -279,10 +248,11 @@ export default class BattleGround {
 
     }
 
+    // 获取每个对象所在的所有敌对正营
     _getEnemies = (target) => {
         let otherSide;
         // 没有地方战斗结束
-        const side = target.groupName; // 本方阵营
+        const side = target.groupName;   // 本方阵营
         for (let name of Object.keys(this.groups)) {
             if (name !== side) {
                 otherSide = this.groups[name]
@@ -294,9 +264,7 @@ export default class BattleGround {
 
     _generateEnemyQuene = (target) => {
         const sides = this._getEnemies(target);
-        const arr = Array.from({
-            length: sides.length
-        }, (k, v) => {
+        const arr = Array.from({length: sides.length}, (k, v) => {
             return v;
         });
         const shuffle_arr = _.shuffle(arr);
@@ -305,232 +273,83 @@ export default class BattleGround {
     _findChildById(id) {
         return this.children.find(child => {
             return child.id === id;
-        }) || null;
+        })
     }
 
-    // 获取所有的操作
-    _getChildActions = (child) => {
-        const rt = JSON.parse(localStorage.getItem('rt'));
-        const {
-            data
-        } = rt;
-        const target = data.find(d => {
-            return d.id === child.id
-        });
-        // 所有动作
-        const {
-            actions
-        } = target;
-        return actions;
+
+    // 接受一个士兵整个过程的所有动作
+    // 可能存在的问题： 游戏结束后仍有部分士兵并没有死亡
+    receiveAction = (actions) => {
+        // console.log('收到了来自' + actions.id + '的操作流程!');
+        if (toString.call(actions).slice(8, -1) === 'Array') {
+            this.actionFlows = [...this.actionFlows, ...actions];
+        } else {
+            this.actionFlows.push(actions);
+        }
     }
 
-    // 进行下一步动作的检验
-    _stepToNextAction = (child) => {
-        if (!child.actions || child.actions.length === 0) {
+
+    makeChildrenActive(child) {
+        let otherSide;
+        const side = child.groupName;
+        // 没有地方战斗结束
+        otherSide = this._getEnemies(child);
+        // 敌方全灭
+        if (otherSide.length === 0) {
+            //console.log(side+'方赢了这场战斗!');
+            this.isBattleOver++;
+            child.stop();
+            this.clearBattleGround(side);
             return;
         }
-        // if (child.id === 'enemy@T@1') {
-        //     console.log(`rilegou `);
-        // }
-        child.actions.shift();
-        child.nowAction = child.actions[0];
-    }
-
-    _getNextAction = (child) => {
-        return child.actions[1];
-    }
-
-    // 检验攻击操作是否正确
-    _checkoutAttack = (child) => {
-        const nowPosition = child.getPosition();
-        const {
-            action,
-            position,
-            direction,
-            once,
-            reset,
-            cb,
-            enemy,
-            sidePosition
-        } = child.nowAction;
-        const {
-            x,
-            y
-        } = position;
-        let isSamePosition,
-            isSameEnemy,
-            isSameDirection;
-        // 是否同一位置
-        if (nowPosition.x === x && nowPosition.y === y) {
-            isSamePosition = true;
-        }
-        // 是否同一敌人
-        if (child.enemy.id === enemy) {
-            isSameEnemy = true;
-        }
-        // 是否同一方向
-
-
-        return isSamePosition && isSameEnemy;
-    }
-
-    // 检验移动操作是否正确
-    _checkoutMove = (child) => {
-        const nowPosition = child.getPosition();
-        const {
-            action,
-            position,
-            direction,
-            once,
-            reset,
-            cb,
-            enemy,
-            sidePosition
-        } = child.nowAction;
-        const {
-            x,
-            y
-        } = position;
-        if (nowPosition.x === x && nowPosition.y === y) {
-            return true;
-        }
-
-        return false;
-    }
-
-
-    // 用来测试的函数
-    _testFunc = (id, child) => {
-        const {
-            action,
-            position,
-            direction,
-            once,
-            reset,
-            enemy,
-            sidePosition
-        } = child.nowAction;
-        const {
-            x,
-            y
-        } = position;
-        const nowPosition = child.getPosition();
-        let target = id === child.id || (child.enemy && id === child.enemy.id);
-        if (target) {
-            // console.log(`${child.id}现在在${'(' + nowPosition.x + ',' + nowPosition.y + ')'},${child.id}的enemy是${enemy},${child.id}目标地点是${'(' + x + ',' + y + ')'},${child.id}要进行的动作为${action}`); 
-            return true;
-        }
-
-        return false;
-    }
-
-
-    // 是否在action位置=> 是否有敌人 => 是否死亡 => 是否攻击 => 是否移动
-    makeChildrenActive = (child) => {
-        // 只需要对客户端进行校验即可
-        if (!child.nowAction) {
-            console.log('没有action了');
+        // 便利每个孩子决定其行为
+        if (!this.judgeLiveState(child)) {
+            child.die();
             return;
         }
-        const {
-            action,
-            position,
-            direction,
-            once,
-            reset,
-            enemy,
-            sidePosition
-        } = child.nowAction;
-        const {
-            x,
-            y
-        } = position;
-        const nowPosition = child.getPosition();
-        if (child.id === 'enemy@T@1') {
-            // console.log(`${}现在在${'('+ nowPosition.x + ',' + nowPosition.y +')'},我的enemy是${enemy},我目标地点是${'('+ x + ',' + y +')'},我要进行的动作为${action}`);
-            let nosense = 1;
-        }
-        if (nowPosition.x === x && nowPosition.y === y) {
-            if (this._testFunc(TEST_CHILD, child)) {
-                console.log('test');
-            }
-            // 按照给定方向
-            child.direction = direction;
-            // 没有敌人只有两种情况，一种是初始化，一种是攻击的敌人已经死亡，此时肯定需要进行下一步的判断
-            // 如何统一呢？？？
-            if (!child.enemy) {
-                child.enemy = this._findChildById(enemy);
-                // 这时还没有敌人证明该敌人已经死亡， 需要进行下一步
-                if (!child.enemy) {
-                    this._stepToNextAction(child);
-                    return;
-                }
-                if (this._testFunc(TEST_CHILD, child)) {
-                    console.log(`${child.id}的敌人转变为${enemy}`);
-                }
-                child.enemy.attackedBy.push(child);
-            }
-
-            if (!this.judgeLiveState(child)) {
-                child.die();
-                // this._stepToNextAction(child);
-                return;
-            }
-
-
-            if (this.judgeAttack(child, child.enemy)) {
-                // console.log('你已经在我攻击范围了： '+child.enemy.SoldierType);
-                // 是否使用技能
-                if (this.judgeSkill(child, child.enemy)) {
-                    console.log('使用技能了');
-                } else {
-                    // 平A
-                    if (!child.isStop()) {
-                        child.stopMove();
-                    }
-                    const ep = child.enemy.getPosition();
-                    const ex = ep.x;
-                    const ey = ep.y;
-                    const nea = this._getNextAction(child);
-                    if (!nea) {
-                        console.log('err');
-                    }
-                    const nep = nea.position;
-                    const nex = nep.x;
-                    const ney = nep.y;
-                    // 如果地方脱离攻击范围或者地方死亡
-                    if ((ex === nex && ey === ney)) {
-                        if (this._testFunc(TEST_CHILD, child)) {
-                            console.log(child.id + '是时候下一步动作了，攻击可已停止了');
-                        }
-                        this._stepToNextAction(child);
-                    }
-                    //  console.log(child.SoldierType+' has '+ child.blood +'HP will attack the ' + child.enemy.blood + 'HP ' + child.enemy.SoldierType)
-                    child.attack(child.enemy);
-                }
-                return;
-            }
-
-
-
-            if (action.indexOf('MOVE') !== -1) {
-                child.isStop() ? child.startMove() : null;
-                child.doAction(action);
-                this._stepToNextAction(child);
-                return;
-            }
-            // console.log('hha')
+        // 该对象没有目标则随机分配一个目标
+        if (!child.enemy) {
+            // 随机一个目标对象
+            const randEnemy = otherSide[Math.floor(Math.random() * otherSide.length)];
+            // const randEnemy = otherSide[0];
+            child.enemy = randEnemy;
+            // 该目标对象保存攻击者，以便于自己死亡时通知攻击者更改目标对象
+            randEnemy.attackedBy.push(child);
         }
 
+        // 判断是否可以攻击
+        if (this.judgeAttack(child, child.enemy)) {
+            // console.log('你已经在我攻击范围了： '+child.enemy.SoldierType);
+            // 是否使用技能
+            if (this.judgeSkill(child, child.enemy)) {
+                console.log('使用技能了');
+            } else {
+                // 平A
+                if (!child.isStop()) {
+                    child.stopMove();
+                }
+                //  console.log(child.SoldierType+' has '+ child.blood +'HP will attack the ' + child.enemy.blood + 'HP ' + child.enemy.SoldierType)
+                child.attack(child.enemy);
+            }
+            return;
+        }
+        // 判断是否可以移动，并且决定移动方向
+        this.judgeMove(child, child.enemy);
+    }
+
+    // 注册动画
+    registAnimation = (child) => {
+        this.MAL.subscribe(child);
     }
 
     // 加入分组
     addToGroup = (children, groupName) => {
         // 将每个对象的战场对象注册为本对象
         children.forEach((child, index) => {
-            child.BattleGround = this;
-            child.id = groupName + '@' + child.SoldierType[0] + '@' + index;
+            child.id = groupName+'@'+child.SoldierType[0]+'@'+index;
             child.setGroup(groupName);
+            // 注册MAL对象
+            this.registAnimation(child);
         })
         // 加入this.children数组
         children.reduce((target, child) => {
@@ -545,6 +364,7 @@ export default class BattleGround {
     addChild(child) {
         child.BattleGround = this;
         this.children.push(child);
+        this.registAnimation(child);
     }
 
     // 移除对象
@@ -593,7 +413,7 @@ export default class BattleGround {
         const sprites = otherChildren.map(oChild => {
             return oChild.getSprite();
         })
-        const collision = this.bump.hit(child.getSprite(),
+        const collision = this.bump.hit(child.getSprite(), 
             sprites,
             false,
             false,
@@ -610,21 +430,21 @@ export default class BattleGround {
         // 存在碰撞
         if (collision) {
             // 转向
-            switch (collision) {
-                case 'right':
-                    forbiddenDirection.add('RIGHT');
-                    break;
-                case 'left':
-                    forbiddenDirection.add('LEFT');
-                    break;
-                case 'top':
-                    forbiddenDirection.add('UP');
-                    break;
-                case 'down':
-                    forbiddenDirection.add('DOWN');
-                    break;
-                default:
-                    //console.log('collistion has '+collision);   
+            switch(collision) {
+            case 'right':
+                forbiddenDirection.add('RIGHT');
+                break;
+            case 'left':
+                forbiddenDirection.add('LEFT');
+                break;
+            case 'top':
+                forbiddenDirection.add('UP');
+                break;
+            case 'down':
+                forbiddenDirection.add('DOWN');
+                break;
+            default:
+                //console.log('collistion has '+collision);   
             }
         }
         // TFD 可转向方向
@@ -633,10 +453,7 @@ export default class BattleGround {
 
     // 封装contain函数
     _contain = (child) => {
-        const {
-            x,
-            y
-        } = this;
+        const {x, y} = this;
         const sprite = child.getSprite();
         return this.bump.contain(sprite, {
             x: 0,
@@ -651,48 +468,38 @@ export default class BattleGround {
         const bounds = new Set();
         let boundLimit = this._contain(child);
         if (boundLimit) {
-            if (boundLimit.has("left")) {
+            if (boundLimit.has("left")){
                 // console.log("The sprite hit the left");
                 bounds.add('LEFT');
-            }
-            if (boundLimit.has("top")) {
+            } 
+            if (boundLimit.has("top")){
                 //console.log("The sprite hit the top");
                 bounds.add('UP');
 
-            }
-            if (boundLimit.has("right")) {
+            } 
+            if (boundLimit.has("right")){
                 //console.log("The sprite hit the right");
                 bounds.add('RIGHT');
-            }
-            if (boundLimit.has("bottom")) {
+            } 
+            if (boundLimit.has("bottom")){
                 //console.log("The sprite hit the bottom");
                 bounds.add('DOWN');
-            }
+            } 
         }
         return bounds;
     }
 
     // 判断是否移动
     judgeMove = (child, enemy) => {
-        // const TFD = this.getChildForbiddenDirection(child);
         const TFD = [];
-        if (TFD.length) {
-            console.log('不能向' + TFD + '走了');
-        }
         child.moveTo(enemy, TFD);
     }
 
     // 判断是否能够攻击
     judgeAttack = (child, enemy) => {
         const point = enemy.getPosition();
-        const {
-            x,
-            y
-        } = point;
-        const {
-            width,
-            height
-        } = this.getBoxSize();
+        const { x, y } = point;
+        const { width, height } = this.getBoxSize();
         const attackArea = this._getAttackArea(child);
         const enemyR = {
             x: x,
@@ -716,18 +523,10 @@ export default class BattleGround {
     _getAttackArea = (target) => {
         const local = target.getPosition();
         // 单元格数目
-        const {
-            attackArea
-        } = target;
+        const { attackArea } = target;
         // 单元格长宽
-        const {
-            width,
-            height
-        } = this.getBoxSize();
-        const {
-            x,
-            y
-        } = local;
+        const { width, height } = this.getBoxSize();
+        const { x, y } = local;
         const rectangles = [];
         // 中间矩形
         const cr = {
@@ -738,16 +537,16 @@ export default class BattleGround {
         }
         rectangles.push(cr);
         // 上面矩形
-        for (let i = 0; i < attackArea; i++) {
+        for(let i=0;i<attackArea;i++) {
             // 左右
             let rr = {
-                x: x + width * i,
+                x: x + width*i,
                 y: y,
                 width: width,
                 height: height
             };
             let lr = {
-                x: x - width * i,
+                x: x - width*i,
                 y: y,
                 width: width,
                 height: height
@@ -755,13 +554,13 @@ export default class BattleGround {
             // 上下
             let ur = {
                 x: x,
-                y: y + i * height,
+                y: y + i*height,
                 width: width,
                 height: height
             }
             let dr = {
                 x: x,
-                y: y - i * height,
+                y: y - i*height,
                 width: width,
                 height: height
             }
@@ -787,3 +586,4 @@ export default class BattleGround {
     }
 
 }
+
