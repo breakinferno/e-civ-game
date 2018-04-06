@@ -1,7 +1,6 @@
 import Soldier from './Soldier'
 import * as PIXI from 'pixi.js'
 import noop from '@/utils/noop.js';
-import { arch } from 'os';
 export default class Archer extends Soldier {
     constructor(cache, blood) {
         super(cache, blood);
