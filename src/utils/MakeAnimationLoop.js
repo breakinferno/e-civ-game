@@ -102,7 +102,7 @@ export default class AnimationManager {
                     'RIGHT': 8
                 }
             })
-            this.holder.actionFlows = JSON.parse(localStorage.getItem('rt')).data;
+            // this.holder.actionFlows = JSON.parse(localStorage.getItem('rt')).data;
             this.actionFrameFlows = this.holder.actionFlows;
         }
         this._gameLoop();

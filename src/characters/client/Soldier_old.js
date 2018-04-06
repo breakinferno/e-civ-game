@@ -913,7 +913,7 @@ class Solider {
 
     // 将该对象加入容器中
     addToScene(scene) {
-        console.log(this.SoldierType + '加入战场');
+        // console.log(this.SoldierType + '加入战场');
         scene.addChild ? scene.addChild(this.displayEntity) : console.error('加入的不是容器，请检查其类型');
     }
 }

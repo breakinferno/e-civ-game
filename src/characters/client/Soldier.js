@@ -285,9 +285,6 @@ class Solider {
         // 判断是否是该帧
         const { data } = frame;
         let target = data[this.id];
-        if (frame.index === 89) {
-            console.log('debug');
-        }
         // 存在对象
         if (target) {
             this.recoverFrame(target);
@@ -470,7 +467,7 @@ class Solider {
 
     // 将该对象加入容器中
     addToScene(scene) {
-        console.log(this.SoldierType + '加入战场');
+        // console.log(this.SoldierType + '加入战场');
         scene.addChild ? scene.addChild(this.displayEntity) : console.error('加入的不是容器，请检查其类型');
     }
 }

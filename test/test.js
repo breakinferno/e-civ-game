@@ -43,6 +43,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
     var target = document.getElementById('Test');
     var other = document.getElementById('other');
     var gs = new GameScene();
+    gs.setClientOrServer(GameScene.CLIENT);
+    // 客户端则需要传递帧数据
+    const data = JSON.parse(localStorage.getItem('rt')).data;
+    gs.setDriveFrames(data);
     gs.mountAt(target);
     gs.setBattleGround(800, 600, {
         row: 5,
@@ -80,19 +84,6 @@ document.addEventListener("DOMContentLoaded", function(event) {
         console.log('所有的操作都在这里啦！')
         // console.table(battleGround.actionFlows);
         console.log('gameOver 啦');
-        localStorage.setItem('rt', JSON.stringify({
-                data: battleGround.actionFlows
-            })
-        );
-        // 写入文件 不能引入fs模块
-        // fs.writeFile(path.join(__dirname, fileName), JSON.stringify({
-        //     data: battleGround.actionFlows
-        // }), (err) => {
-        //     if (err) {
-        //         throw err;
-        //     }
-        //     console.log('the file has been saved');
-        // })
     })
 
     gs.load(()=>{

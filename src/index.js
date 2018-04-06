@@ -7,8 +7,7 @@ import CONST_VALUE from '@/utils/ConstValue';
 const {SOLDIER_TEXTURES} = CONST_VALUE.SOLDIER;
 
 // 客户端
-const BattleGround = BG.client;
-const Soldiers = Soldier.Soldier_client;
+let BattleGround, Soldiers;
 // 服务端
 // const BattleGround = BG.server;
 // const Soldiers = Soldier.Soldier_server;
@@ -31,6 +30,10 @@ const DEFAULT_SOURCE_URL = [
 
 
 class GameScene {
+
+    static CLIENT = CLIENT;
+    static SERVER = SERVER;
+
     constructor(options) {
         this.app = new Application({
             width: 800,
@@ -41,6 +44,7 @@ class GameScene {
             ...options
         });
         this._init();
+        this.isClientOrServer = null;
     }
     // 依次按照顺序加载场景
     // 每个场景结束都调用自己的回调函数，
@@ -49,6 +53,17 @@ class GameScene {
         this.battleGround.initGroup(side);
         this.battleGround.addGroupToScene(autoSize);
         this.battleGround.battle();
+    }
+
+    setClientOrServer(isClientOrServer) {
+        if (isClientOrServer === SERVER) {
+            BattleGround = BG.server;
+            Soldiers = Soldier.Soldier_server;
+        } else {
+            BattleGround = BG.client;
+            Soldiers = Soldier.Soldier_client;
+        }
+        this.isClientOrServer = isClientOrServer;
     }
 
     // 指定某个场景before, after, over回调
@@ -110,6 +125,18 @@ class GameScene {
         this.app.renderer.backgroundColor = bg;
     }
 
+    getDriveFrames() {
+        return this.battleGround.actionFlows;
+    }
+
+    // 设置驱动帧
+    setDriveFrames(frames) {
+        if (this.battleGround) {
+            this.battleGround.actionFlows = frames;
+        }
+        this.driveFrames = frames;
+    }
+
     mountAt = (target) => {
         // 可加判断
         target.appendChild(this.view);
@@ -162,7 +189,13 @@ class GameScene {
 
     // 设置战场
     setBattleGround(width, heigth, layout) {
+        if (!BattleGround) {
+            console.error('请设置用户端,服务器还是客户端,使用本对象的setClientOrServer方法和GameScene.CLIENT or GameScene.SERVER参数来设置');
+        }
         this.battleGround = new BattleGround(width, heigth, layout, this.scenes);
+        if (this.driveFrames) {
+            this.battleGround.actionFlows = this.driveFrames;
+        }
     }
 
     // 游戏帧率
@@ -253,6 +286,9 @@ class GameScene {
 
     // 创建可管理精灵对象
     _createManageableSprite = ({ soldierType, count }, maxNum = 100) => {
+        if (!Soldiers) {
+            console.error('请设置用户端,服务器还是客户端,使用本对象的setClientOrServer方法和GameScene.CLIENT or GameScene.SERVER参数来设置');
+        }
         let rt = [];
         if (Soldiers[soldierType]) {
             let num = Math.ceil(count / maxNum);
