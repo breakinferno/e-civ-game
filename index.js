@@ -1,2 +1,1 @@
-var GameScene = require('./lib/app.js');
-module.exports =  GameScene;
+module.exports = require('./lib/app.js');
