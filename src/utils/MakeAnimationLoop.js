@@ -11,7 +11,11 @@ import * as PIXI from 'pixi.js';
 import _ from 'lodash';
 import noop from './noop'
 import item from '@/item'
+import FramesLoader from './FramesLoader'
+import CONST_VALUE from '@/utils/ConstValue';
 
+
+const {SOLDIER_TEXTURES} = CONST_VALUE.SOLDIER;
 const ShotItem = item.ShotItem;
 const INTERVAL = 1000; // 一秒
 export const SERVER = 'server';
@@ -51,6 +55,9 @@ export default class AnimationManager {
         this.FPS = FPS;
         this.isStop = false;
         this.frameIndex = 0;
+        this.shotItemCache = [];
+        // 将要取消订阅的订阅者数组
+        this.willCancelSubscribers = [];
     }
 
     // 兵种订阅
@@ -61,6 +68,7 @@ export default class AnimationManager {
 
 
     // 取消动画订阅
+    // 立即取消订阅
     cancelSubscribe = (child) => {
         //test
         // const shotItems = this.subscribers.filter(subscriber => {
@@ -83,6 +91,17 @@ export default class AnimationManager {
         this.now = Date.now();
         // test
         if (this.isServerOrClient === CLIENT) {
+            this.FramesLoader = new FramesLoader(new PIXI.Sprite());
+            this.FramesLoader.setResources(this.holder.resources[SOLDIER_TEXTURES]);
+            this.FramesLoader.loadActionFramesFromResource('SHOT', 4, 4, null, 'Archer_shot.png');
+            this.FramesLoader.loadActionFramesFromState({
+                'SHOT': {
+                    'UP': 12,
+                    'DOWN': 0,
+                    'LEFT': 4,
+                    'RIGHT': 8
+                }
+            })
             this.holder.actionFlows = JSON.parse(localStorage.getItem('rt')).data;
             this.actionFrameFlows = this.holder.actionFlows;
         }
@@ -107,13 +126,54 @@ export default class AnimationManager {
 
         if (this.isServerOrClient === CLIENT) {
             const frame = this.actionFrameFlows[this.frameIndex-1];
+            // 取消订阅
+            this.subscribers = _.difference(this.subscribers, this.willCancelSubscribers);
+            // 清除上一真的shotItem 对象
+            this.shotItemCache.forEach(shotItem => {
+                shotItem.clear();
+            })
+            this.shotItemCache = [];
+            // 获取帧对象
+            // const frame = this.actionFrameFlows[this.frameIndex-1];
+
+            if (this.frameIndex === this.actionFrameFlows.length || frame.data.battleOver) {
+                // 动画结束
+                this.stop();
+                this.holder.clearBattleGround(frame.data.winner);
+                return ;
+            }
             this.subscribers.forEach(subscriber => {
                 if (this.frameIndex === frame.index){
                     this._subscribeAnimate(subscriber);
                 }
+            });
+            // 复原未注册的对象
+            const data = frame.data;
+            data['shotItem'].forEach(item => {
+                const shotItem = this._fakeShotItem(item);
+                this.shotItemCache.push(shotItem);
             })
         }
 
+    }
+
+    // 用于接受需要取消订阅的订阅者
+    // 下一帧或者任意帧取消订阅
+    acceptCancelSubscriber = (subscriber) => {
+        this.willCancelSubscribers.push(subscriber);
+    }
+
+
+    // 暂时就这样吧...如果同一一点可以将每个shotItem对象设置唯一id。
+    _fakeShotItem = (item) => {
+        const {position, rotation, direction} = item;
+        const frame = this.FramesLoader._getCacheFrames('SHOT@'+direction);
+        const shotItem = new ShotItem(null, frame);
+        shotItem.direction = direction;
+        shotItem.addToScene(this.holder.getScene());
+        shotItem._setPosition(position);
+        shotItem.setAngel(rotation);
+        return shotItem;
     }
 
     // 上传某帧所有对象状态
@@ -131,7 +191,11 @@ export default class AnimationManager {
     // 每个订阅者动画
     // 订阅者必须实现active接口
     _subscribeAnimate = (subscriber) => {
-        subscriber.active(this.actionFrameFlows[this.frameIndex-1]);
+        if (this.isServerOrClient === CLIENT) {
+            subscriber.active(this.actionFrameFlows[this.frameIndex-1]);
+        } else {
+            subscriber.active();
+        }
     }
 
 
@@ -191,9 +255,16 @@ export default class AnimationManager {
         this.FPS = FPS;
     }
 
-    stop = () => {
+    stop = (result) => {
         if (this.isStop) {
             return;
+        }
+        if (this.isServerOrClient === SERVER) {
+            //发送结果
+            this.uploadFrameState({
+                winner: result,
+                battleOver: true
+            })
         }
         this.isStop = true;
         this.timer?window.cancelAnimationFrame(this.timer):null;

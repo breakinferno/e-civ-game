@@ -31,6 +31,10 @@ export default class FramesLoader {
         this.sprite = sprite;
     }
 
+    setSprite = (sprite) => {
+        this.sprite = sprite;
+    }
+
     // 注册一个新的动作
     registerAction = (name, callback) => {
         this._defaultActions.includes(name) ? null : this._defaultActions.push(name);

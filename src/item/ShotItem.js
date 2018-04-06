@@ -93,6 +93,10 @@ class ShotItem {
         return this.sprite;
     }
 
+    clear () {
+        this.sprite.visible = false;
+    }
+
     // 击中敌人停止飞行
     // 敌人死亡停止飞行
     stopFly(){
@@ -223,6 +227,10 @@ class ShotItem {
         }
         // 旋转角度
         this.sprite.rotation = this.angel;
+    }
+
+    setAngel = (angel) => {
+        this.sprite.rotation = angel;
     }
 
     getAngel(){

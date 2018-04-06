@@ -214,20 +214,11 @@ export default class BattleGround {
         this.ys = y / this.layout.row;
     }
 
-    battleOver = () => {
-        this.MAL.stop();
-    }
 
     // 清理战场
     clearBattleGround = (side) => {
-        if (this.isBattleOver === 1) {
             console.log('清理战场中...');
             // 停止所有动作
-            this.children.forEach(child=>{
-                // 强制上传其动作
-                child.uploadAction(child.steps);
-            });
-            this.battleOver();
             // typeof this.overCB === 'function'?this.overCB(side):null;
             console.log('战场打扫完毕！');
             // 下一个场景
@@ -236,7 +227,7 @@ export default class BattleGround {
             this.preResult = side;
             // 传递结果
             this.loadScene(scene);
-        }
+
     }
 
     // 接受回调
@@ -288,54 +279,6 @@ export default class BattleGround {
         }
     }
 
-
-    makeChildrenActive(child) {
-        let otherSide;
-        const side = child.groupName;
-        // 没有地方战斗结束
-        otherSide = this._getEnemies(child);
-        // 敌方全灭
-        if (otherSide.length === 0) {
-            //console.log(side+'方赢了这场战斗!');
-            this.isBattleOver++;
-            child.stop();
-            this.clearBattleGround(side);
-            return;
-        }
-        // 便利每个孩子决定其行为
-        if (!this.judgeLiveState(child)) {
-            child.die();
-            return;
-        }
-        // 该对象没有目标则随机分配一个目标
-        if (!child.enemy) {
-            // 随机一个目标对象
-            const randEnemy = otherSide[Math.floor(Math.random() * otherSide.length)];
-            // const randEnemy = otherSide[0];
-            child.enemy = randEnemy;
-            // 该目标对象保存攻击者，以便于自己死亡时通知攻击者更改目标对象
-            randEnemy.attackedBy.push(child);
-        }
-
-        // 判断是否可以攻击
-        if (this.judgeAttack(child, child.enemy)) {
-            // console.log('你已经在我攻击范围了： '+child.enemy.SoldierType);
-            // 是否使用技能
-            if (this.judgeSkill(child, child.enemy)) {
-                console.log('使用技能了');
-            } else {
-                // 平A
-                if (!child.isStop()) {
-                    child.stopMove();
-                }
-                //  console.log(child.SoldierType+' has '+ child.blood +'HP will attack the ' + child.enemy.blood + 'HP ' + child.enemy.SoldierType)
-                child.attack(child.enemy);
-            }
-            return;
-        }
-        // 判断是否可以移动，并且决定移动方向
-        this.judgeMove(child, child.enemy);
-    }
 
     // 注册动画
     registAnimation = (child) => {
@@ -401,188 +344,6 @@ export default class BattleGround {
         }
         children.splice(index, 1);
         return children;
-    }
-
-    // 判断边界
-    // 返回边界数组
-    getChildForbiddenDirection(child) {
-        // 判断移动范围
-        const forbiddenDirection = this._judgeBounds(child);
-        // 碰撞检测
-        const otherChildren = this._getExtraChildren(child);
-        const sprites = otherChildren.map(oChild => {
-            return oChild.getSprite();
-        })
-        const collision = this.bump.hit(child.getSprite(), 
-            sprites,
-            false,
-            false,
-            true,
-            (colli, platform) => {
-                // console.log('get Collision: collision is '+colli+'; platform is '+ platform);
-                // const {x, y} = child.getSprite().getGlobalPosition();
-                // console.log('x: '+x+' : y '+y);
-                // child.setPosition(x, y);
-                // child.stopMove();
-                return;
-            }
-        )
-        // 存在碰撞
-        if (collision) {
-            // 转向
-            switch(collision) {
-            case 'right':
-                forbiddenDirection.add('RIGHT');
-                break;
-            case 'left':
-                forbiddenDirection.add('LEFT');
-                break;
-            case 'top':
-                forbiddenDirection.add('UP');
-                break;
-            case 'down':
-                forbiddenDirection.add('DOWN');
-                break;
-            default:
-                //console.log('collistion has '+collision);   
-            }
-        }
-        // TFD 可转向方向
-        return Array.from(forbiddenDirection);
-    }
-
-    // 封装contain函数
-    _contain = (child) => {
-        const {x, y} = this;
-        const sprite = child.getSprite();
-        return this.bump.contain(sprite, {
-            x: 0,
-            y: 0,
-            width: x,
-            height: y
-        })
-    }
-
-    // 判断战场边界
-    _judgeBounds = (child) => {
-        const bounds = new Set();
-        let boundLimit = this._contain(child);
-        if (boundLimit) {
-            if (boundLimit.has("left")){
-                // console.log("The sprite hit the left");
-                bounds.add('LEFT');
-            } 
-            if (boundLimit.has("top")){
-                //console.log("The sprite hit the top");
-                bounds.add('UP');
-
-            } 
-            if (boundLimit.has("right")){
-                //console.log("The sprite hit the right");
-                bounds.add('RIGHT');
-            } 
-            if (boundLimit.has("bottom")){
-                //console.log("The sprite hit the bottom");
-                bounds.add('DOWN');
-            } 
-        }
-        return bounds;
-    }
-
-    // 判断是否移动
-    judgeMove = (child, enemy) => {
-        const TFD = [];
-        child.moveTo(enemy, TFD);
-    }
-
-    // 判断是否能够攻击
-    judgeAttack = (child, enemy) => {
-        const point = enemy.getPosition();
-        const { x, y } = point;
-        const { width, height } = this.getBoxSize();
-        const attackArea = this._getAttackArea(child);
-        const enemyR = {
-            x: x,
-            y: y,
-            width: width,
-            height: height
-        }
-        // 判断敌人是否在攻击范围内
-        const canAttack = attackArea.some(area => {
-            return this.bump.hitTestRectangle(area, enemyR)
-        });
-        return canAttack;
-    }
-
-
-    // 判断两个区域是否相交
-
-
-    // 周围九宫格或者四个方向
-    // 返回Rectangle对象数组
-    _getAttackArea = (target) => {
-        const local = target.getPosition();
-        // 单元格数目
-        const { attackArea } = target;
-        // 单元格长宽
-        const { width, height } = this.getBoxSize();
-        const { x, y } = local;
-        const rectangles = [];
-        // 中间矩形
-        const cr = {
-            x: x,
-            y: y,
-            width: width,
-            height: height
-        }
-        rectangles.push(cr);
-        // 上面矩形
-        for(let i=0;i<attackArea;i++) {
-            // 左右
-            let rr = {
-                x: x + width*i,
-                y: y,
-                width: width,
-                height: height
-            };
-            let lr = {
-                x: x - width*i,
-                y: y,
-                width: width,
-                height: height
-            };
-            // 上下
-            let ur = {
-                x: x,
-                y: y + i*height,
-                width: width,
-                height: height
-            }
-            let dr = {
-                x: x,
-                y: y - i*height,
-                width: width,
-                height: height
-            }
-            rectangles.push(rr);
-            rectangles.push(lr);
-            rectangles.push(ur);
-            rectangles.push(dr);
-        }
-
-
-        return rectangles
-
-    }
-
-    // 判断对象状态
-    judgeLiveState(child) {
-        return child.getLiveState();
-    }
-
-    // 指挥对象释放技能
-    judgeSkill(child) {
-        return false;
     }
 
 }

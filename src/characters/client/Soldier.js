@@ -265,7 +265,14 @@ class Solider {
     // 人物静止
     stop = () => {
         // 取消订阅
-        this.MAL.cancelSubscribe(this);
+        this.sprite.destroy();
+        this.displayEntity.destroy();
+        // this.MAL.cancelSubscribe(this);
+    }
+
+    // 通知取消该对象的订阅
+    notifyCancelSubscribe() {
+        this.MAL.acceptCancelSubscriber(this);
     }
 
     // 复原函数
@@ -278,22 +285,30 @@ class Solider {
         // 判断是否是该帧
         const { data } = frame;
         let target = data[this.id];
+        if (frame.index === 89) {
+            console.log('debug');
+        }
         // 存在对象
         if (target) {
             this.recoverFrame(target);
             delete temp[this.id];
         } else {
-            console.log('不存在该对象');
+            // 可能导致bug 因为该数组正在被使用，但是下一步也进行了更改。
+            if (this.blood === 0) {
+                this.notifyCancelSubscribe();
+                this.stop();
+            }
+            return;
         }
-        // 复原shotItem
-        const shotItems = frame['shotItem'];
-        shotItems.forEach(shotItem => {
-            // 复原位置
-        });
-        delete temp['shotItem'];
-            // 删除多余的元素，类似于角色死亡
-            // 剩余的元素使之消失
-    
+        // // 复原shotItem
+        // const shotItems = data['shotItem'];
+        // shotItems.forEach(shotItem => {
+        //     // 复原位置
+        // });
+        // delete temp['shotItem'];
+        // // 删除多余的元素，类似于角色死亡
+        // // 剩余的元素使之消失
+        
     }
 
 
@@ -308,19 +323,30 @@ class Solider {
         }
     }
 
-    // 上传执行过的动作,用于客户端检验
-    uploadAction = (actions) => {
-        this.BattleGround.receiveAction({
-            id: this.id,
-            actions: actions
-        })
+
+    // 复原动作
+    recoverAction = (action, frameIndex) => {
+        const frame = this.FramesLoader.getActionFrame(action, frameIndex);
+        this.FramesLoader.changeFrame(frame);
     }
-    
+
+    // 复原血量
+    recoverBlood = (blood) => {
+        this.blood = blood;
+        const percent = blood / this.maxBlood;
+        this.setHealthBar(HEALTH_WIDTH*percent);
+    }
 
     // 每帧复原
     recoverFrame = (state) => {
         const {id, direction, position, health, isLive, frame, action} = state;
         // 复原操作。。。。。
+        // 复原位置
+        this.setPosition(position);
+        // 复原动作及其方向
+        this.recoverAction(action, frame);
+        // 复原血量
+        this.recoverBlood(health);
     }
 
     // 加载帧
@@ -424,152 +450,6 @@ class Solider {
     }
 
 
-    // 设计路径的优化
-    _judgeLongestDirection(target) {
-        const {x,y} = target.getPosition();
-        const position = this.getPosition();
-        const xLength = Math.abs(position.x - x);
-        const yLength = Math.abs(position.y - y); 
-        let primarity;
-        if (xLength < yLength && xLength) {
-            primarity = ['UP', 'DOWN'];
-        }
-
-        if (yLength < xLength && yLength) {
-            primarity = ['LEFT', 'RIGHT'];
-        }
-
-        if (yLength === xLength) {
-            primarity = ['LEFT', 'RIGHT', 'UP', 'DOWN'];
-        }
-
-        if (xLength === 0) {
-            primarity = ['UP', 'DOWN'];
-        }
-
-        if (yLength === 0) {
-            primarity = ['LEFT', 'RIGHT'];
-        }
-    
-        return primarity;
-    }
-
-
-    // 路径优化一下
-    _judgeShortestDirection(target) {
-        const {x,y} = target.getPosition();
-        const position = this.getPosition();
-        const xLength = Math.abs(position.x - x);
-        const yLength = Math.abs(position.y - y);
-        let primarity;
-        if (xLength < yLength && xLength) {
-            primarity = ['LEFT', 'RIGHT'];
-        }
-
-        if (yLength < xLength && yLength) {
-            primarity = ['UP', 'DOWN'];
-        }
-
-        if (yLength === xLength) {
-            primarity = ['LEFT', 'RIGHT', 'UP', 'DOWN'];
-        }
-
-        if (xLength === 0) {
-            primarity = ['UP', 'DOWN'];
-        }
-
-        if (yLength === 0) {
-            primarity = ['LEFT', 'RIGHT'];
-        }
-    
-        return primarity;
-    }
-
-    // 判断目标方向
-    // 参数是Soldier对象
-    _judgeDirection(target) {
-        let rt = [];
-        const {x,y} = target.getPosition();
-        const position = this.getPosition();
-        if (x > position.x) {
-            rt.push('RIGHT');
-        }
-
-        if (x < position.x) {
-            rt.push('LEFT');
-        }
-
-        if (y > position.y) {
-            rt.push('DOWN');
-        }
-
-        if (y < position.y) {
-            rt.push('UP');
-        }
-
-        if (rt.length === 0) {
-            rt = ['UP', 'DOWN', 'RIGHT', 'LEFT'];
-            // console.error('我擦难道你已经无路可走了吗？。。');
-        }
-        return rt;
-    }
-
-    // 移动到目标
-    // 参数目标坐标
-    moveTo = (dest, forbiddenDirection = []) => {
-        const totalAction = ['RIGHT', 'LEFT', 'DOWN', 'UP'];
-        this.isStop() ? this.startMove() : null;
-        this.avaliableDirection = [];
-        // 判断方向
-        const directions = this._judgeDirection(dest);
-        directions.forEach(direction => {
-            // this.avaliableDirection.push('MOVE@'+direction);
-            this.avaliableDirection.push(direction);
-        })
-        // 剔除禁止的方向
-        forbiddenDirection.forEach((direc) => {
-            let index = this.avaliableDirection.findIndex(d => {
-                return d === direc
-            })
-            if (index !== -1) {
-                this.avaliableDirection.splice(index, 1);
-            }
-        });
-
-        // 如果没有路径可走，则随机一个没有禁止的方向
-        if (this.avaliableDirection.length <= 0) {
-            // 剔除禁止方向
-            forbiddenDirection.forEach((direc) => {
-                let index = totalAction.findIndex(d => {
-                    return d === direc
-                })
-                if (index !== -1) {
-                    totalAction.splice(index, 1);
-                }
-            });
-            // 剩余随机方向
-            // 剩余方向没有
-            if (totalAction.length > 0) {
-                const randomDirection = totalAction[Math.floor(Math.random() * totalAction.length)];
-                this.doAction('MOVE@' + randomDirection);
-                return;
-            }
-            this.doAction(this.actionTypes[Math.floor(Math.random() * this.actionTypes.length)]);
-            return;
-        }
-
-        // 是否是同一方向，这里采取的是如果上一次方向可用，则继续上一次方向，而不是随机方向
-        // 导致人物走较长的折线
-        const temp = this.lastStep.split('@');
-        if (temp[0] === 'MOVE' && this.avaliableDirection.includes(temp[1])) {
-            this.doAction(this.lastStep);
-            return;
-        }
-        const action = this.avaliableDirection[Math.floor(Math.random() * this.avaliableDirection.length)];
-        //console.log(actions)
-        this.direction = action;
-        action ? this.doAction('MOVE@'+action) : null;
-    }
     // 获取位置
     getPosition() {
         return {
@@ -586,20 +466,7 @@ class Solider {
             this.displayEntity.position.set(x, y);
         }
     }
-    // 转向
-    // 参数方向或者Soldier对象
-    turnTo(to) {
-        if (typeof to === 'string') {
-            this.direction = to;
-        } else {
-            const directions = this._judgeDirection(to);
-            this.direction = directions[Math.floor(Math.random()*directions.length)];
-        }
-        // console.log('turn to '+this.direction);
-        // this.changeFrame(this.direction, this.texture);
-        // this.sprite.texture = this.texture;
-        //this.sprite.texture.update();
-    }
+
 
     // 将该对象加入容器中
     addToScene(scene) {

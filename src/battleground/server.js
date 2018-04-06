@@ -214,8 +214,8 @@ export default class BattleGround {
         this.ys = y / this.layout.row;
     }
 
-    battleOver = () => {
-        this.MAL.stop();
+    battleOver = (result) => {
+        this.MAL.stop(result);
     }
 
     // 清理战场
@@ -223,14 +223,14 @@ export default class BattleGround {
         if (this.isBattleOver === 1) {
             console.log('清理战场中...');
             // 停止所有动作
-
-            this.battleOver();
+            // 发送结果
             // typeof this.overCB === 'function'?this.overCB(side):null;
             console.log('战场打扫完毕！');
             // 下一个场景
             this.currentSceneIndex++;
             const scene = this.scenes[this.currentSceneIndex];
             this.preResult = side;
+            this.battleOver(this.preResult);
             // 传递结果
             this.loadScene(scene);
         }
