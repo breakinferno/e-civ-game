@@ -4,6 +4,4 @@ test/
 
 dist/
 
-*.js
-
 *.md
