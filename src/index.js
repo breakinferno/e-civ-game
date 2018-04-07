@@ -324,6 +324,12 @@ class GameScene {
             .on('progress', progressHanlder)
             .load(callback)
     }
+
+    // 重置资源， 以防重新加载是报资源已经存在错误。
+    resetResource() {
+        PIXI.utils.clearTextureCache(); // ?
+        loader = loader.reset();
+    }
 }
 
 
