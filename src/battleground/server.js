@@ -5,18 +5,19 @@ import _ from 'lodash';
 import * as PIXI from 'pixi.js';
 import Bump from 'bump.js'
 import MakeAnimationLoop, {SERVER} from '@/utils/MakeAnimationLoop';
+import CONST_VALUE from '@/utils/ConstValue';
+
+const {GAME_DEFAULT_WIDTH, GAME_DEFAULT_HEIGHT} = CONST_VALUE.GAME;
 
 export default class BattleGround {
     constructor(x = 800, y = 600, layout = { col: 30, row: 40 }, scenes = []) {
         this.currentSceneIndex = 0;
         this.currentScene = scenes[this.currentSceneIndex];
         this.scenes = scenes;
-        this.gameScene = scenes[0]['scene'];
-        this.gameOverScene = scenes[scenes.length - 1]['scene'];
         this.layout = layout;
         this.children = [];
         this.groups = {};
-        // 缩放比例
+        // 缩放比例 根据800*600进行缩放
         this.scale = {
             x: 1,
             y: 1
@@ -179,7 +180,7 @@ export default class BattleGround {
     battle = () => {
         //this.makeChildrenActive();
         this.MAL.animate();
-        console.log('battle start');
+        // console.log('battle start');
     }
 
     // 将所有子对象加载到场景中
@@ -195,7 +196,7 @@ export default class BattleGround {
         const { width, height } = this.getBoxSize();
         child.unitX = width;
         child.unitY = height;
-        child.addToScene(this.gameScene);
+        child.addToScene(this.getScene());
     }
 
     // 自适应格子
@@ -212,6 +213,14 @@ export default class BattleGround {
         this.y = y;
         this.xs = x / this.layout.col;
         this.ys = y / this.layout.row;
+        this.setScale(x, y);
+    }
+
+    // 设置缩放
+    setScale(x, y) {
+        this.scale.x = x / GAME_DEFAULT_WIDTH;
+        this.scale.y = y / GAME_DEFAULT_HEIGHT;
+        return this;
     }
 
     battleOver = (result) => {

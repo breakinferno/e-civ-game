@@ -222,7 +222,7 @@ class Solider {
             initHeight = y + height;
             break;
         default:
-            console.log('方向有误');
+            throw new Error('方向有误');
         }
         shotItem.init(frames, initWidth, initHeight);
         shotItem.fly(this._hit);
@@ -342,7 +342,7 @@ class Solider {
     }
 
     destroy = () => {
-        console.log(this.id+'destroying...');
+        // console.log(this.id+'destroying...');
         this.BattleGround.removeChild(this);
         this.sprite.destroy();
         this.displayEntity.destroy();

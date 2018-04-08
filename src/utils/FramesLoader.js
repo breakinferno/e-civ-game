@@ -139,7 +139,6 @@ export default class FramesLoader {
     resetActionFrame = () => {
         this.currentAction = '';
         // 新的动作
-        // console.log('你重置动画帧了');
     }
 
     /**

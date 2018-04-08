@@ -8,7 +8,6 @@ const {FLY_STEP_LENGTH} = CONST_VALUE.SHOTITEM;
 
 class ShotItem {
     constructor(enemy, texture) {
-        // console.log(enemy);
         this.enemy = enemy;
         this.canFly = true;
         this._init(texture);
@@ -68,7 +67,7 @@ class ShotItem {
         } else if (type === 'Object') {
             this.sprite.texture = texture;
         } else {
-            console.log('传入shotItem的参数有误，请检查!');
+            throw new Error('传入shotItem的参数有误，请检查!');
         }
     }
 
@@ -108,7 +107,7 @@ class ShotItem {
             this.canFly = false;
             this.MAL.cancelSubscribe(this);
         } else {
-            console.log('the fly item already stop');
+            // console.warn('the fly item already stop');
         }
     }
 
@@ -123,7 +122,6 @@ class ShotItem {
         const enemyRec = this.enemy.getArea();
         // 是否飞出边界
         if (this._isOutOfBounds()) {
-            console.log('飞出边界了');
             typeof this._outBounds === 'function'?this._outBounds():null;
             this.stopFly();
             return;

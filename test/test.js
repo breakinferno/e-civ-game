@@ -57,6 +57,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
         row: 5,
         col: 20
     });
+
+    // 全屏
+    // gs.setToFullScreen();
     // 设置背景色
     gs.setBg(0x4f7dc4);
     // 创建结束场景

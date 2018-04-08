@@ -4,15 +4,16 @@
 import _ from 'lodash';
 import * as PIXI from 'pixi.js';
 import Bump from 'bump.js'
-import MakeAnimationLoop, {CLIENT} from '@/utils/MakeAnimationLoop';
+import MakeAnimationLoop, { CLIENT } from '@/utils/MakeAnimationLoop';
+import CONST_VALUE from '@/utils/ConstValue';
+
+const {GAME_DEFAULT_WIDTH, GAME_DEFAULT_HEIGHT} = CONST_VALUE.GAME;
 
 export default class BattleGround {
     constructor(x = 800, y = 600, layout = { col: 30, row: 40 }, scenes = []) {
         this.currentSceneIndex = 0;
         this.currentScene = scenes[this.currentSceneIndex];
         this.scenes = scenes;
-        this.gameScene = scenes[0]['scene'];
-        this.gameOverScene = scenes[scenes.length - 1]['scene'];
         this.layout = layout;
         this.children = [];
         this.groups = {};
@@ -36,7 +37,7 @@ export default class BattleGround {
         this.MAL.holder = this;
     }
 
-    setFPS(FPS){
+    setFPS(FPS) {
         this.MAL.setFPS(FPS);
     }
 
@@ -52,14 +53,14 @@ export default class BattleGround {
         // 当前场景消失
         this.setSceneFade(this.currentScene);
         // 加载下一个场景
-        typeof scene.before === 'function'?scene.before.call(scene, this.preResult, scene.scene, this):null;
+        typeof scene.before === 'function' ? scene.before.call(scene, this.preResult, scene.scene, this) : null;
         // 下一个场景传递参数
         if (typeof scene.cb === 'function') {
             scene.cb.call(scene.scene, this.preResult, scene.scene, this);
         }
-        scene.scene.visible = true;    
-        typeof scene.after === 'function'?scene.after.call(scene, this.preResult, scene.scene, this):null;
-        typeof scene.over === 'function'?scene.over.call(scene, this.preResult, scene.scene, this):null;
+        scene.scene.visible = true;
+        typeof scene.after === 'function' ? scene.after.call(scene, this.preResult, scene.scene, this) : null;
+        typeof scene.over === 'function' ? scene.over.call(scene, this.preResult, scene.scene, this) : null;
 
     }
 
@@ -179,7 +180,7 @@ export default class BattleGround {
     battle = () => {
         //this.makeChildrenActive();
         this.MAL.animate();
-        console.log('battle start');
+        // console.log('battle start');
     }
 
     // 将所有子对象加载到场景中
@@ -195,7 +196,7 @@ export default class BattleGround {
         const { width, height } = this.getBoxSize();
         child.unitX = width;
         child.unitY = height;
-        child.addToScene(this.gameScene);
+        child.addToScene(this.getScene());
     }
 
     // 自适应格子
@@ -212,21 +213,29 @@ export default class BattleGround {
         this.y = y;
         this.xs = x / this.layout.col;
         this.ys = y / this.layout.row;
+        this.setScale(x, y);
+    }
+
+    // 设置缩放
+    setScale(x, y) {
+        this.scale.x = x / GAME_DEFAULT_WIDTH;
+        this.scale.y = y / GAME_DEFAULT_HEIGHT;
+        return this;
     }
 
 
     // 清理战场
     clearBattleGround = (side) => {
-            console.log('清理战场中...');
-            // 停止所有动作
-            // typeof this.overCB === 'function'?this.overCB(side):null;
-            console.log('战场打扫完毕！');
-            // 下一个场景
-            this.currentSceneIndex++;
-            const scene = this.scenes[this.currentSceneIndex];
-            this.preResult = side;
-            // 传递结果
-            this.loadScene(scene);
+        console.log('清理战场中...');
+        // 停止所有动作
+        // typeof this.overCB === 'function'?this.overCB(side):null;
+        console.log('战场打扫完毕！');
+        // 下一个场景
+        this.currentSceneIndex++;
+        const scene = this.scenes[this.currentSceneIndex];
+        this.preResult = side;
+        // 传递结果
+        this.loadScene(scene);
 
     }
 
@@ -255,7 +264,7 @@ export default class BattleGround {
 
     _generateEnemyQuene = (target) => {
         const sides = this._getEnemies(target);
-        const arr = Array.from({length: sides.length}, (k, v) => {
+        const arr = Array.from({ length: sides.length }, (k, v) => {
             return v;
         });
         const shuffle_arr = _.shuffle(arr);
@@ -289,7 +298,7 @@ export default class BattleGround {
     addToGroup = (children, groupName) => {
         // 将每个对象的战场对象注册为本对象
         children.forEach((child, index) => {
-            child.id = groupName+'@'+child.SoldierType[0]+'@'+index;
+            child.id = groupName + '@' + child.SoldierType[0] + '@' + index;
             child.setGroup(groupName);
             // 注册MAL对象
             this.registAnimation(child);

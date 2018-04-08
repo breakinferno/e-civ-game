@@ -7,7 +7,8 @@ import MAL, {SERVER, CLIENT} from '@/utils/MakeAnimationLoop';
 import CONST_VALUE from '@/utils/ConstValue';
 
 
-const {SOLDIER_TEXTURES} = CONST_VALUE.SOLDIER;
+const {SOLDIER_TEXTURES,} = CONST_VALUE.SOLDIER;
+const {GAME_DEFAULT_WIDTH, GAME_DEFAULT_HEIGHT} = CONST_VALUE.GAME;
 
 let BattleGround, Soldiers;
 let Application = PIXI.Application,
@@ -25,25 +26,25 @@ const DEFAULT_SOURCE_URL = [
     SOLDIER_TEXTURES
 ];
 
-// loader.baseUrl  = '../';
 
-
-
-// loader.baseUrl = path.resolve(__dirname, '..');
-
-// console.log(loader.baseUrl);
-// console.log(__dirname);
-// console.log(__filename);
+// 初始化样式
+var newStyle = document.createElement("style");
+var style = "* {padding: 0; margin: 0}";
+newStyle.appendChild(document.createTextNode(style));
+document.head.appendChild(newStyle);
 
 class GameScene {
 
     static CLIENT = CLIENT;
     static SERVER = SERVER;
+    // 默认的画布宽高
+    static DEFAULT_WIDTH = GAME_DEFAULT_WIDTH;
+    static DEFAULT_HEIGHT = GAME_DEFAULT_HEIGHT;
 
     constructor(options) {
         this.app = new Application({
-            width: 800,
-            height: 600,
+            width: GameScene.DEFAULT_WIDTH,
+            height: GameScene.DEFAULT_HEIGHT,
             antialiasing: true,
             transparent: false,
             resolution: 1,
@@ -59,6 +60,14 @@ class GameScene {
         this.battleGround.initGroup(side);
         this.battleGround.addGroupToScene(autoSize);
         this.battleGround.battle();
+    }
+
+    resize = (width, height) => {
+        this.app.renderer.autoResize = true;
+        this.renderer.resize(width, height);
+        this.width = width;
+        this.height = height;
+        this.battleGround.resize(width, height);
     }
 
     setResourceBaseUrl = (baseUrl) => {
@@ -131,6 +140,27 @@ class GameScene {
         scene.after = after;
     }
 
+    // 自适应给定宽高的元素
+    setToFullParent = () => {
+        if (this.parent) {
+            const {clientWidth, clientHeight} = this.parent;
+            if (clientWidth && clientHeight) {
+                this.resize(clientWidth, clientHeight);
+            } else {
+                throw new Error('the element you mount should has width and height both');  
+            }
+            return ;
+        }
+        throw new Error('you must decide where you want to mount the object(you can use the function：mountAt) before you call this function')
+    }
+
+    // 全屏
+    setToFullScreen = () => {
+        this.app.renderer.view.style.position = "absolute";
+        this.app.renderer.view.style.display = "block";
+        this.resize(window.innerWidth, window.innerHeight);
+    }
+
     setBg = (bg) => {
         this.app.renderer.backgroundColor = bg;
     }
@@ -148,6 +178,7 @@ class GameScene {
     }
 
     mountAt = (target) => {
+        this.parent = target;
         // 可加判断
         target.appendChild(this.view);
     }
@@ -198,11 +229,27 @@ class GameScene {
     }
 
     // 设置战场
-    setBattleGround(width, heigth, layout) {
+    setBattleGround(width, height, layout) {
         if (!BattleGround) {
             console.error('请设置用户端,服务器还是客户端,使用本对象的setClientOrServer方法和GameScene.CLIENT or GameScene.SERVER参数来设置');
         }
-        this.battleGround = new BattleGround(width, heigth, layout, this.scenes);
+        // 适应
+        if (!layout) {
+            if (typeof height === 'undefined') {
+                layout = width || {row: 1, col: 1};
+                width = this.width;
+                height = this.height;
+            } else {
+                layout = height;
+                width = width.width;
+                height = width.height;
+            }
+        }
+        this.width = width;
+        this.height =  height;
+        this.battleGround = new BattleGround(this.width, this.heigth, layout, this.scenes);
+        this.battleGround.game = this;
+        this.resize(this.width, this.height);
         if (this.driveFrames) {
             this.battleGround.actionFlows = this.driveFrames;
         }
@@ -219,6 +266,10 @@ class GameScene {
         this.view = this.app.view;
         this.renderer = this.app.renderer
         this.stage = this.app.stage;
+        this.width = this.renderer.width;
+        this.height = this.renderer.height;
+        // scale
+        // const scale = this.scaleToArea(this.renderer.view);
         // main/start scene
         const gameScene = new Container();
         this.scenes.push({
@@ -340,6 +391,69 @@ class GameScene {
         PIXI.utils.clearTextureCache(); // ?
         loader = loader.reset();
     }
+
+    // 获取缩放
+    // scaleToArea = (canvas, backgroundColor) => {
+    //     var scaleX, scaleY, scale, center;
+      
+    //     scaleX = window.innerWidth / canvas.offsetWidth;
+    //     scaleY = window.innerHeight / canvas.offsetHeight;
+      
+    //     scale = Math.min(scaleX, scaleY);
+    //     canvas.style.transformOrigin = "0 0";
+    //     canvas.style.transform = "scale(" + scale + ")";
+      
+    //     if (canvas.offsetWidth > canvas.offsetHeight) {
+    //       if (canvas.offsetWidth * scale < window.innerWidth) {
+    //         center = "horizontally";
+    //       } else {
+    //         center = "vertically";
+    //       }
+    //     } else {
+    //       if (canvas.offsetHeight * scale < window.innerHeight) {
+    //         center = "vertically";
+    //       } else {
+    //         center = "horizontally";
+    //       }
+    //     }
+      
+    //     var margin;
+    //     if (center === "horizontally") {
+    //       margin = (window.innerWidth - canvas.offsetWidth * scale) / 2;
+    //       canvas.style.marginTop = 0 + "px";
+    //       canvas.style.marginBottom = 0 + "px";
+    //       canvas.style.marginLeft = margin + "px";
+    //       canvas.style.marginRight = margin + "px";
+    //     }
+      
+    //     if (center === "vertically") {
+    //       margin = (window.innerHeight - canvas.offsetHeight * scale) / 2;
+    //       canvas.style.marginTop = margin + "px";
+    //       canvas.style.marginBottom = margin + "px";
+    //       canvas.style.marginLeft = 0 + "px";
+    //       canvas.style.marginRight = 0 + "px";
+    //     }
+      
+    //     canvas.style.paddingLeft = 0 + "px";
+    //     canvas.style.paddingRight = 0 + "px";
+    //     canvas.style.paddingTop = 0 + "px";
+    //     canvas.style.paddingBottom = 0 + "px";
+    //     canvas.style.display = "block";
+      
+    //     document.body.style.backgroundColor = backgroundColor;
+      
+    //     var ua = navigator.userAgent.toLowerCase();
+    //     if (ua.indexOf("safari") != -1) {
+    //       if (ua.indexOf("chrome") > -1) {
+    //         // Chrome
+    //       } else {
+    //         // Safari
+
+    //       }
+    //     }
+        
+    //     return scale;
+    //   } 
 }
 
 

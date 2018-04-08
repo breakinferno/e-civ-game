@@ -180,7 +180,7 @@ class Solider {
 
 
     destroy = () => {
-        console.log(this.id+'destroying...');
+        // console.log(this.id+'destroying...');
         this.BattleGround.removeChild(this);
         this.sprite.destroy();
         this.displayEntity.destroy();
@@ -189,8 +189,8 @@ class Solider {
 
     initSpeed() {
         const {FPS} = this.BattleGround.MAL;
-        this.speedX = SECEND_STEP_LENGTH/FPS;
-        this.speedY = SECEND_STEP_LENGTH/FPS;
+        this.speedX = SECEND_STEP_LENGTH*this.BattleGround.scale.x/FPS;
+        this.speedY = SECEND_STEP_LENGTH*this.BattleGround.scale.y/FPS;
     }
 
     setSpeed(x, y) {

@@ -228,7 +228,7 @@ class Solider {
             initHeight = y + height;
             break;
         default:
-            console.log('方向有误');
+            throw new Error('方向有误');
         }
         shotItem.init(frames, initWidth, initHeight, this._hit);
         // shotItem.fly(this._hit);
@@ -267,7 +267,7 @@ class Solider {
     // 停止攻击
     // 停止内部循环函数
     stopAttack() {
-        console.log('stop attack');
+        // console.log('stop attack');
     }
 
     attack = (enemy) => {
@@ -287,7 +287,7 @@ class Solider {
         }
 
         if (!this.direction) {
-            console.log('方向都没有你怎么不上天呢？');
+            throw new Error('方向都没有你怎么不上天呢？');
         }
 
         // 判断是否是同意敌人
@@ -346,7 +346,6 @@ class Solider {
     }
 
     destroy = () => {
-        console.log(this.id+'destroying...');
         this.BattleGround.removeChild(this);
         this.sprite.destroy();
         this.displayEntity.destroy();
@@ -355,8 +354,8 @@ class Solider {
 
     initSpeed() {
         const {FPS} = this.BattleGround.MAL;
-        this.speedX = SECEND_STEP_LENGTH/FPS;
-        this.speedY = SECEND_STEP_LENGTH/FPS;
+        this.speedX = SECEND_STEP_LENGTH*this.BattleGround.scale.x/FPS;
+        this.speedY = SECEND_STEP_LENGTH*this.BattleGround.scale.y/FPS;
     }
 
     setSpeed(x, y) {

@@ -59,7 +59,7 @@ class ShotItem {
         } else if (type === 'Object') {
             this.sprite.texture = texture;
         } else {
-            console.log('传入shotItem的参数有误，请检查!');
+            throw new Error('传入shotItem的参数有误，请检查!');
         }
     }
 
