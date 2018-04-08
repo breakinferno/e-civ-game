@@ -2,19 +2,18 @@ import * as PIXI from 'pixi.js';
 import BG from './battleground'
 import Soldier from './characters'
 import noop from '@/utils/noop'
+import path from 'path'
 import MAL, {SERVER, CLIENT} from '@/utils/MakeAnimationLoop';
 import CONST_VALUE from '@/utils/ConstValue';
+
+
 const {SOLDIER_TEXTURES} = CONST_VALUE.SOLDIER;
 
-// 客户端
 let BattleGround, Soldiers;
-// 服务端
-// const BattleGround = BG.server;
-// const Soldiers = Soldier.Soldier_server;
-
 let Application = PIXI.Application,
     Container = PIXI.Container,
     loader = PIXI.loader,
+    // loader =  new PIXI.loaders.Loader("", 10),
     resources = PIXI.loader.resources,
     Graphics = PIXI.Graphics,
     TextureCache = PIXI.utils.TextureCache,
@@ -23,11 +22,18 @@ let Application = PIXI.Application,
     TextStyle = PIXI.TextStyle;
 
 const DEFAULT_SOURCE_URL = [
-    '/images/cat.png',
-    '/images/treasureHunter.json',
-    '/images/testCharacter.json'
+    SOLDIER_TEXTURES
 ];
 
+// loader.baseUrl  = '../';
+
+
+
+// loader.baseUrl = path.resolve(__dirname, '..');
+
+// console.log(loader.baseUrl);
+// console.log(__dirname);
+// console.log(__filename);
 
 class GameScene {
 
@@ -53,6 +59,10 @@ class GameScene {
         this.battleGround.initGroup(side);
         this.battleGround.addGroupToScene(autoSize);
         this.battleGround.battle();
+    }
+
+    setResourceBaseUrl = (baseUrl) => {
+        loader.baseUrl = baseUrl;
     }
 
     setClientOrServer(isClientOrServer) {
@@ -326,7 +336,7 @@ class GameScene {
     }
 
     // 重置资源， 以防重新加载是报资源已经存在错误。
-    resetResource() {
+    unmount() {
         PIXI.utils.clearTextureCache(); // ?
         loader = loader.reset();
     }

@@ -11,7 +11,7 @@ module.exports = {
 　　entry: './test/test.js',
 　　output: {
 　　    path: path.resolve(__dirname, './dist'), //生成的文件存放目录
-        publicPath: '/dist/',
+        publicPath: "/assets/",
     　　filename: "bundle.js", //生成的文件 name 表示entry下面的app,
         library: 'e-civ-game',
         libraryTarget: 'umd'
@@ -38,15 +38,20 @@ module.exports = {
                 test: /\.(png|jpg|gif|ttf|svg|woff|eot)$/,  
                 loader: 'url-loader',  
                 query: {  
-                    limit: 10000,  
-                    name: '[name].[ext]?[hash]'  
+                    limit: 8192,  
+                    name: '[name].[ext]?[hash]'
                 }  
+            },
+            {
+                test: /\.json$/,
+                include: path.join(__dirname, 'node_modules', 'pixi.js'),
+                loader: 'json'
             }
         ]
     },
-    // node: {
-    //     fs: "empty"
-    // },
+    node: {
+        __dirname: true
+    },
     plugins: [
         new webpack.optimize.ModuleConcatenationPlugin(),
         new OpenBrowserPlugin({ url: 'http://localhost:8080/test/index.html' })

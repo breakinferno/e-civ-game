@@ -1,6 +1,6 @@
 // 士兵的常量
 // 士兵的贴图
-const SOLDIER_TEXTURES = '/images/testCharacter.json';
+const SOLDIER_TEXTURES = '/static/images/testCharacter.json';
 const HEALTH_WIDTH = 30;
 const HEALTH_HEIGHT = 3;
 // 士兵每秒移动距离

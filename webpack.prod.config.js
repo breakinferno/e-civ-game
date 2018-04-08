@@ -37,15 +37,20 @@ module.exports = {
                 test: /\.(png|jpg|gif|ttf|svg|woff|eot)$/,  
                 loader: 'url-loader',  
                 query: {  
-                    limit: 10000,  
+                    limit: 8192,  
                     name: '[name].[ext]?[hash]'  
                 }  
+            },
+            {
+                test: /\.json$/,
+                include: path.join(__dirname, 'node_modules', 'pixi.js'),
+                loader: 'json'
             }
         ]
     },
-    // node: {
-    //     fs: "empty"
-    // },
+    node: {
+        __dirname: true
+    },
     plugins: [
         new webpack.optimize.ModuleConcatenationPlugin(),
     ],

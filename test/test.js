@@ -39,14 +39,19 @@ const test2 = {
     }]
 }
 
+var imgTempl = '<img src="../images/cat.png" />';
+document.getElementById('test').innerHTML = imgTempl;
+
+
 document.addEventListener("DOMContentLoaded", function(event) {
     var target = document.getElementById('Test');
     var other = document.getElementById('other');
     var gs = new GameScene();
-    gs.setClientOrServer(GameScene.CLIENT);
+    gs.setClientOrServer(GameScene.SERVER);
     // 客户端则需要传递帧数据
-    const data = JSON.parse(localStorage.getItem('rt')).data;
-    gs.setDriveFrames(data);
+    // const data = JSON.parse(localStorage.getItem('rt')).data;
+    // gs.setDriveFrames(data);
+    
     gs.mountAt(target);
     gs.setBattleGround(800, 600, {
         row: 5,
