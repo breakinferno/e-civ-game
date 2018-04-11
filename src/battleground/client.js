@@ -7,7 +7,7 @@ import Bump from 'bump.js'
 import MakeAnimationLoop, { CLIENT } from '@/utils/MakeAnimationLoop';
 import CONST_VALUE from '@/utils/ConstValue';
 
-const {GAME_DEFAULT_WIDTH, GAME_DEFAULT_HEIGHT} = CONST_VALUE.GAME;
+const { GAME_DEFAULT_WIDTH, GAME_DEFAULT_HEIGHT } = CONST_VALUE.GAME;
 
 export default class BattleGround {
     constructor(x = 800, y = 600, layout = { col: 30, row: 40 }, scenes = []) {
@@ -17,11 +17,15 @@ export default class BattleGround {
         this.layout = layout;
         this.children = [];
         this.groups = {};
-        // 缩放比例
+        // 缩放比例 根据前一次大小进行缩放
         this.scale = {
             x: 1,
             y: 1
         };
+        // 记录前一次的大小
+        this.beforeArea = {
+            x, y
+        }
         this.padding = 5;
         this.marging = 5;
         this.bump = new Bump(PIXI);
@@ -167,12 +171,13 @@ export default class BattleGround {
 
     // 将组对象加入场景。fittable是否保持缩放
     addGroupToScene = (fittable) => {
+        this.fittable = fittable;
         let totalChildren = [];
         for (let group of Object.keys(this.groups)) {
             totalChildren = [...totalChildren, ...this.groups[group]];
         }
         totalChildren.forEach(child => {
-            this.addChildToScene(child, fittable);
+            this.addChildToScene(child);
         })
         return this;
     }
@@ -184,14 +189,17 @@ export default class BattleGround {
     }
 
     // 将所有子对象加载到场景中
-    addChildToScene(child, fittable) {
-        if (fittable) {
-            const { sprite } = child;
+    addChildToScene(child) {
+        if (this.fittable) {
+            const { sprite, pivot } = child;
             const { height, width } = sprite;
             const { ys, xs } = this;
             sprite.scale.x = xs / width;
             sprite.scale.y = ys / height;
             //sprite.anchor.set(0.5, 0.5);
+            child.setPosition(child.originPosition);
+        } else {
+            child.setPosition(child.pivotPosition);
         }
         const { width, height } = this.getBoxSize();
         child.unitX = width;
@@ -199,13 +207,70 @@ export default class BattleGround {
         child.addToScene(this.getScene());
     }
 
+    // 士兵自适应格子大小,弓箭自适应scale大小
+    _justify(child) {
+        const {sprite} = child;
+        if (!child.originSize) {
+            child.originSize = {
+                width: sprite.width,
+                height: sprite.height
+            }
+        }
+        const {
+            height,
+            width
+        } = child.originSize;
+        const {
+            ys,
+            xs
+        } = this;
+        // 弓箭之类的东东
+        if (child instanceof ShotItem) {
+            sprite.scale.x = this.scale.x;
+            sprite.scale.y = this.scale.y;
+            return ;
+        }
+        sprite.scale.x = xs / width;
+        sprite.scale.y = ys / height;
+    }
+
+
     // 自适应格子
     _justifyBox(row, col, element) {
         const y = row * this.ys;
         const x = col * this.xs;
-        element.setPosition(x, y);
-        // test
-        //element.addToScene(this.scene);
+        const { sprite } = element;
+        const { height, width } = sprite;
+        // 使中心重叠即可
+        const pivot = {
+            x: x + this.xs / 2,
+            y: y + this.ys / 2
+        }
+
+        const origin = {
+            x: pivot.x - width / 2,
+            y: pivot.y - height / 2
+        }
+        element.originPosition = {
+            x: x,
+            y: y
+        };
+        element.pivotPosition = origin;
+    }
+
+    _setScale(x, y) {
+        // 新的缩放比列
+        this.scale.x = x / this.beforeArea.x;
+        this.scale.y = y / this.beforeArea.y;
+    }
+
+    _setBeforeArea(x, y) {
+        // 新的缩放比列
+        this.scale.x = this.beforeArea.x / x;
+        this.scale.y = this.beforeArea.y / y;
+        // 重置宽高记录
+        this.beforeArea.x = x;
+        this.beforeArea.y = y;
     }
 
     resize(x, y) {
@@ -213,15 +278,55 @@ export default class BattleGround {
         this.y = y;
         this.xs = x / this.layout.col;
         this.ys = y / this.layout.row;
-        this.setScale(x, y);
+        // 改变窗口缩放
+        this._setScale(x, y);
+        // 改变对象大小
+        this._resize();
+        // 记录当前改变以便下次改变参考缩放
+        this._setBeforeArea(x, y);
     }
 
-    // 设置缩放
-    setScale(x, y) {
-        this.scale.x = x / GAME_DEFAULT_WIDTH;
-        this.scale.y = y / GAME_DEFAULT_HEIGHT;
-        return this;
+    // 初始化之后所有对象resize
+    _resize() {
+        this.children.forEach(child => {
+            this.setChildResize(child);
+        })
     }
+
+    // 子元素重新确定位置缩放
+    setChildResize = (child) => {
+        if (child instanceof ShotItem) {
+            console.log('shotItem');
+        }
+        const { sprite } = child;
+        // 复原大小
+        // child.sprite.width = child.originSize.width;
+        // child.sprite.height = child.originSize.height;
+        // 重新确定位置
+        const { x, y } = child.getPosition();
+        const nx = x * this.scale.x;
+        const ny = y * this.scale.y;
+        child.setPosition(nx, ny);
+        // 重新确定缩放比列
+        if (this.fittable) {
+            this._justify(child);
+        }
+        // 重新确定速度
+        if (child instanceof ShotItem) {
+            return;
+        }
+        const speed = child.getSpeed();
+        child.setSpeed(speed.vx * this.scale.x, speed.vy * this.scale.y);
+    }
+
+    // 子元素重新确定位置缩放
+    setChildResize = (child) => {
+        const { x, y } = child.getPosition();
+        const nx = x * this.scale.x;
+        const ny = y * this.scale.y;
+        child.setPosition(nx, ny);
+    }
+
 
 
     // 清理战场
@@ -291,6 +396,9 @@ export default class BattleGround {
 
     // 注册动画
     registAnimation = (child) => {
+        if (!child.BattleGround) {
+            child.BattleGround = this;
+        }
         this.MAL.subscribe(child);
     }
 

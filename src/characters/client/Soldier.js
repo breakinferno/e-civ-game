@@ -119,7 +119,7 @@ class Solider {
         }
 
         const message = new PIXI.Text(this.id, style);
-        this.healthBar.addChild(message);
+        // this.healthBar.addChild(message);
     }
 
     // 制作血条
@@ -200,6 +200,13 @@ class Solider {
         } else {
             this.speedX = x;
             this.speedY = y;
+        }
+    }
+
+    getSpeed() {
+        return {
+            vx: this.speedX,
+            vy: this.speedY
         }
     }
 

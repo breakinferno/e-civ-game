@@ -119,7 +119,7 @@ class Solider {
         }
 
         const message = new PIXI.Text(this.id, style);
-        this.healthBar.addChild(message);
+        // this.healthBar.addChild(message);
     }
 
     // 制作血条
@@ -203,6 +203,7 @@ class Solider {
         const shotItem = new ShotItem(enemy);
         shotItem.direction = direction;
         this.BattleGround.registAnimation(shotItem);
+        // this.BattleGround.addChild(shotItem);
         // shotItem.setDirection(this.direction);
         const scene = this.BattleGround.getScene();
         shotItem.addToScene(scene);
@@ -354,8 +355,15 @@ class Solider {
 
     initSpeed() {
         const {FPS} = this.BattleGround.MAL;
-        this.speedX = SECEND_STEP_LENGTH*this.BattleGround.scale.x/FPS;
-        this.speedY = SECEND_STEP_LENGTH*this.BattleGround.scale.y/FPS;
+        this.speedX = SECEND_STEP_LENGTH*this.BattleGround.scale.x * FPS;
+        this.speedY = SECEND_STEP_LENGTH*this.BattleGround.scale.y * FPS;
+    }
+
+    getSpeed() {
+        return {
+            vx: this.speedX,
+            vy: this.speedY
+        }
     }
 
     setSpeed(x, y) {

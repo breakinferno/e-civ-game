@@ -1,27 +1,40 @@
-
 // 该对象设计主要用于检测浏览器窗口变化和管理游戏界面的尺寸比例
 // 仲裁各个对象的行为和状态，类似于一个管理器
 import _ from 'lodash';
 import * as PIXI from 'pixi.js';
 import Bump from 'bump.js'
-import MakeAnimationLoop, {SERVER} from '@/utils/MakeAnimationLoop';
+import MakeAnimationLoop, {
+    SERVER
+} from '@/utils/MakeAnimationLoop';
 import CONST_VALUE from '@/utils/ConstValue';
+import ShotItem from '../item/ShotItem';
 
-const {GAME_DEFAULT_WIDTH, GAME_DEFAULT_HEIGHT} = CONST_VALUE.GAME;
+const {
+    GAME_DEFAULT_WIDTH,
+    GAME_DEFAULT_HEIGHT
+} = CONST_VALUE.GAME;
 
 export default class BattleGround {
-    constructor(x = 800, y = 600, layout = { col: 30, row: 40 }, scenes = []) {
+    constructor(x = 800, y = 600, layout = {
+        col: 30,
+        row: 40
+    }, scenes = []) {
         this.currentSceneIndex = 0;
         this.currentScene = scenes[this.currentSceneIndex];
         this.scenes = scenes;
         this.layout = layout;
         this.children = [];
         this.groups = {};
-        // 缩放比例 根据800*600进行缩放
+        // 缩放比例 根据前一次大小进行缩放
         this.scale = {
             x: 1,
             y: 1
         };
+        // 记录前一次的大小
+        this.beforeArea = {
+            x,
+            y
+        }
         this.padding = 5;
         this.marging = 5;
         this.bump = new Bump(PIXI);
@@ -37,7 +50,7 @@ export default class BattleGround {
         this.MAL.holder = this;
     }
 
-    setFPS(FPS){
+    setFPS(FPS) {
         this.MAL.setFPS(FPS);
     }
 
@@ -53,14 +66,14 @@ export default class BattleGround {
         // 当前场景消失
         this.setSceneFade(this.currentScene);
         // 加载下一个场景
-        typeof scene.before === 'function'?scene.before.call(scene, this.preResult, scene.scene, this):null;
+        typeof scene.before === 'function' ? scene.before.call(scene, this.preResult, scene.scene, this) : null;
         // 下一个场景传递参数
         if (typeof scene.cb === 'function') {
             scene.cb.call(scene.scene, this.preResult, scene.scene, this);
         }
-        scene.scene.visible = true;    
-        typeof scene.after === 'function'?scene.after.call(scene, this.preResult, scene.scene, this):null;
-        typeof scene.over === 'function'?scene.over.call(scene, this.preResult, scene.scene, this):null;
+        scene.scene.visible = true;
+        typeof scene.after === 'function' ? scene.after.call(scene, this.preResult, scene.scene, this) : null;
+        typeof scene.over === 'function' ? scene.over.call(scene, this.preResult, scene.scene, this) : null;
 
     }
 
@@ -125,11 +138,15 @@ export default class BattleGround {
         const isLandScope = true;
         let boardMap = isLandScope ? (val) => {
             // 默认为横版
-            const { row } = this.layout;
+            const {
+                row
+            } = this.layout;
             const rt = [(val % row + row - 1) % row, Math.floor((val - 1) / row)];
             return rt;
         } : (val) => {
-            const { col } = this.layout;
+            const {
+                col
+            } = this.layout;
             return [Math.floor((val - 1) / col), (val % col - 1 + col) % col];
         }
         // 列数
@@ -167,12 +184,13 @@ export default class BattleGround {
 
     // 将组对象加入场景。fittable是否保持缩放
     addGroupToScene = (fittable) => {
+        this.fittable = fittable;
         let totalChildren = [];
         for (let group of Object.keys(this.groups)) {
             totalChildren = [...totalChildren, ...this.groups[group]];
         }
         totalChildren.forEach(child => {
-            this.addChildToScene(child, fittable);
+            this.addChildToScene(child);
         })
         return this;
     }
@@ -184,43 +202,147 @@ export default class BattleGround {
     }
 
     // 将所有子对象加载到场景中
-    addChildToScene(child, fittable) {
-        if (fittable) {
-            const { sprite } = child;
-            const { height, width } = sprite;
-            const { ys, xs } = this;
-            sprite.scale.x = xs / width;
-            sprite.scale.y = ys / height;
+    addChildToScene(child) {
+        if (this.fittable) {
+            const {
+                sprite,
+                pivot
+            } = child;
+            this._justify(child);
             //sprite.anchor.set(0.5, 0.5);
+            child.setPosition(child.originPosition);
+        } else {
+            child.setPosition(child.pivotPosition);
         }
-        const { width, height } = this.getBoxSize();
+        const {
+            width,
+            height
+        } = this.getBoxSize();
         child.unitX = width;
         child.unitY = height;
         child.addToScene(this.getScene());
     }
 
+    // 士兵自适应格子大小,弓箭自适应scale大小
+    _justify(child) {
+        const {sprite} = child;
+        if (!child.originSize) {
+            child.originSize = {
+                width: sprite.width,
+                height: sprite.height
+            }
+        }
+        const {
+            height,
+            width
+        } = child.originSize;
+        const {
+            ys,
+            xs
+        } = this;
+        // 弓箭之类的东东
+        if (child instanceof ShotItem) {
+            sprite.scale.x = this.scale.x;
+            sprite.scale.y = this.scale.y;
+            return ;
+        }
+        sprite.scale.x = xs / width;
+        sprite.scale.y = ys / height;
+    }
+
+
+
     // 自适应格子
     _justifyBox(row, col, element) {
         const y = row * this.ys;
         const x = col * this.xs;
-        element.setPosition(x, y);
-        // test
-        //element.addToScene(this.scene);
+        const {
+            sprite
+        } = element;
+        const {
+            height,
+            width
+        } = sprite;
+        element.originSize = {
+            width,
+            height
+        }
+        // 使中心重叠即可
+        const pivot = {
+            x: x + this.xs / 2,
+            y: y + this.ys / 2
+        }
+
+        const origin = {
+            x: pivot.x - width / 2,
+            y: pivot.y - height / 2
+        }
+        element.originPosition = {
+            x: x,
+            y: y
+        };
+        element.pivotPosition = origin;
     }
 
+    _setScale(x, y) {
+        // 新的缩放比列
+        this.scale.x = x / this.beforeArea.x;
+        this.scale.y = y / this.beforeArea.y;
+    }
+
+    _setBeforeArea(x, y) {
+        // 重置宽高记录
+        this.beforeArea.x = x;
+        this.beforeArea.y = y;
+    }
+
+    // 窗口改变,自适应改变
     resize(x, y) {
         this.x = x;
         this.y = y;
         this.xs = x / this.layout.col;
         this.ys = y / this.layout.row;
-        this.setScale(x, y);
+        // 改变窗口缩放
+        this._setScale(x, y);
+        // 改变对象大小
+        this._resize();
+        // 记录当前改变以便下次改变参考缩放
+        this._setBeforeArea(x, y);
     }
 
-    // 设置缩放
-    setScale(x, y) {
-        this.scale.x = x / GAME_DEFAULT_WIDTH;
-        this.scale.y = y / GAME_DEFAULT_HEIGHT;
-        return this;
+    // 初始化之后所有对象resize
+    _resize() {
+        this.children.forEach(child => {
+            this.setChildResize(child);
+        })
+    }
+
+    // 子元素重新确定位置缩放
+    setChildResize = (child) => {
+        const {
+            sprite
+        } = child;
+        // 复原大小
+        // child.sprite.width = child.originSize.width;
+        // child.sprite.height = child.originSize.height;
+        // 重新确定位置
+        const {
+            x,
+            y
+        } = child.getPosition();
+        const nx = x * this.scale.x;
+        const ny = y * this.scale.y;
+        child.setPosition(nx, ny);
+        // 重新确定缩放比列
+        if (this.fittable) {
+            this._justify(child);
+        }
+        // 重新确定速度
+        if (child instanceof ShotItem) {
+            return;
+        }
+        const speed = child.getSpeed();
+        child.setSpeed(speed.vx * this.scale.x, speed.vy * this.scale.y);
     }
 
     battleOver = (result) => {
@@ -258,7 +380,7 @@ export default class BattleGround {
     _getEnemies = (target) => {
         let otherSide;
         // 没有地方战斗结束
-        const side = target.groupName;   // 本方阵营
+        const side = target.groupName; // 本方阵营
         for (let name of Object.keys(this.groups)) {
             if (name !== side) {
                 otherSide = this.groups[name]
@@ -270,7 +392,9 @@ export default class BattleGround {
 
     _generateEnemyQuene = (target) => {
         const sides = this._getEnemies(target);
-        const arr = Array.from({length: sides.length}, (k, v) => {
+        const arr = Array.from({
+            length: sides.length
+        }, (k, v) => {
             return v;
         });
         const shuffle_arr = _.shuffle(arr);
@@ -348,6 +472,9 @@ export default class BattleGround {
 
     // 注册动画
     registAnimation = (child) => {
+        if (!child.BattleGround) {
+            child.BattleGround = this;
+        }
         this.MAL.subscribe(child);
     }
 
@@ -355,7 +482,7 @@ export default class BattleGround {
     addToGroup = (children, groupName) => {
         // 将每个对象的战场对象注册为本对象
         children.forEach((child, index) => {
-            child.id = groupName+'@'+child.SoldierType[0]+'@'+index;
+            child.id = groupName + '@' + child.SoldierType[0] + '@' + index;
             child.setGroup(groupName);
             // 注册MAL对象
             this.registAnimation(child);
@@ -422,7 +549,7 @@ export default class BattleGround {
         const sprites = otherChildren.map(oChild => {
             return oChild.getSprite();
         })
-        const collision = this.bump.hit(child.getSprite(), 
+        const collision = this.bump.hit(child.getSprite(),
             sprites,
             false,
             false,
@@ -439,21 +566,21 @@ export default class BattleGround {
         // 存在碰撞
         if (collision) {
             // 转向
-            switch(collision) {
-            case 'right':
-                forbiddenDirection.add('RIGHT');
-                break;
-            case 'left':
-                forbiddenDirection.add('LEFT');
-                break;
-            case 'top':
-                forbiddenDirection.add('UP');
-                break;
-            case 'down':
-                forbiddenDirection.add('DOWN');
-                break;
-            default:
-                //console.log('collistion has '+collision);   
+            switch (collision) {
+                case 'right':
+                    forbiddenDirection.add('RIGHT');
+                    break;
+                case 'left':
+                    forbiddenDirection.add('LEFT');
+                    break;
+                case 'top':
+                    forbiddenDirection.add('UP');
+                    break;
+                case 'down':
+                    forbiddenDirection.add('DOWN');
+                    break;
+                default:
+                    //console.log('collistion has '+collision);   
             }
         }
         // TFD 可转向方向
@@ -462,7 +589,10 @@ export default class BattleGround {
 
     // 封装contain函数
     _contain = (child) => {
-        const {x, y} = this;
+        const {
+            x,
+            y
+        } = this;
         const sprite = child.getSprite();
         return this.bump.contain(sprite, {
             x: 0,
@@ -477,23 +607,23 @@ export default class BattleGround {
         const bounds = new Set();
         let boundLimit = this._contain(child);
         if (boundLimit) {
-            if (boundLimit.has("left")){
+            if (boundLimit.has("left")) {
                 // console.log("The sprite hit the left");
                 bounds.add('LEFT');
-            } 
-            if (boundLimit.has("top")){
+            }
+            if (boundLimit.has("top")) {
                 //console.log("The sprite hit the top");
                 bounds.add('UP');
 
-            } 
-            if (boundLimit.has("right")){
+            }
+            if (boundLimit.has("right")) {
                 //console.log("The sprite hit the right");
                 bounds.add('RIGHT');
-            } 
-            if (boundLimit.has("bottom")){
+            }
+            if (boundLimit.has("bottom")) {
                 //console.log("The sprite hit the bottom");
                 bounds.add('DOWN');
-            } 
+            }
         }
         return bounds;
     }
@@ -507,8 +637,14 @@ export default class BattleGround {
     // 判断是否能够攻击
     judgeAttack = (child, enemy) => {
         const point = enemy.getPosition();
-        const { x, y } = point;
-        const { width, height } = this.getBoxSize();
+        const {
+            x,
+            y
+        } = point;
+        const {
+            width,
+            height
+        } = this.getBoxSize();
         const attackArea = this._getAttackArea(child);
         const enemyR = {
             x: x,
@@ -532,10 +668,18 @@ export default class BattleGround {
     _getAttackArea = (target) => {
         const local = target.getPosition();
         // 单元格数目
-        const { attackArea } = target;
+        const {
+            attackArea
+        } = target;
         // 单元格长宽
-        const { width, height } = this.getBoxSize();
-        const { x, y } = local;
+        const {
+            width,
+            height
+        } = this.getBoxSize();
+        const {
+            x,
+            y
+        } = local;
         const rectangles = [];
         // 中间矩形
         const cr = {
@@ -546,16 +690,16 @@ export default class BattleGround {
         }
         rectangles.push(cr);
         // 上面矩形
-        for(let i=0;i<attackArea;i++) {
+        for (let i = 0; i < attackArea; i++) {
             // 左右
             let rr = {
-                x: x + width*i,
+                x: x + width * i,
                 y: y,
                 width: width,
                 height: height
             };
             let lr = {
-                x: x - width*i,
+                x: x - width * i,
                 y: y,
                 width: width,
                 height: height
@@ -563,13 +707,13 @@ export default class BattleGround {
             // 上下
             let ur = {
                 x: x,
-                y: y + i*height,
+                y: y + i * height,
                 width: width,
                 height: height
             }
             let dr = {
                 x: x,
-                y: y - i*height,
+                y: y - i * height,
                 width: width,
                 height: height
             }
@@ -595,4 +739,3 @@ export default class BattleGround {
     }
 
 }
-

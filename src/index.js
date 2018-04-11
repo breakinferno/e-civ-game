@@ -63,11 +63,12 @@ class GameScene {
     }
 
     resize = (width, height) => {
+        this.battleGround.resize(width, height);
+
         this.app.renderer.autoResize = true;
         this.renderer.resize(width, height);
         this.width = width;
         this.height = height;
-        this.battleGround.resize(width, height);
     }
 
     setResourceBaseUrl = (baseUrl) => {
@@ -249,7 +250,6 @@ class GameScene {
         this.height =  height;
         this.battleGround = new BattleGround(this.width, this.heigth, layout, this.scenes);
         this.battleGround.game = this;
-        this.resize(this.width, this.height);
         if (this.driveFrames) {
             this.battleGround.actionFlows = this.driveFrames;
         }
@@ -390,6 +390,14 @@ class GameScene {
     unmount() {
         PIXI.utils.clearTextureCache(); // ?
         loader = loader.reset();
+    }
+
+    // 重置动画 TODO
+    reset() {
+        // 重置帧率
+        // 重置缩放
+        // 重置对象
+        // 重置Scene
     }
 
     // 获取缩放

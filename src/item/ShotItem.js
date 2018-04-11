@@ -48,7 +48,7 @@ class ShotItem {
 
     init = (frame, x, y, hitCallback) => {
         this.setTexture(frame);
-        this._setPosition(x, y);
+        this.setPosition(x, y);
         this.sprite.visible = true;
         this._hitCallback = hitCallback;
     }
@@ -106,6 +106,7 @@ class ShotItem {
             // 清除定时器
             this.canFly = false;
             this.MAL.cancelSubscribe(this);
+            // this.MAL.holder.removeChild(this);
         } else {
             // console.warn('the fly item already stop');
         }
@@ -132,7 +133,7 @@ class ShotItem {
             this.stopFly();
             return;
         }
-        const myPoint = this._getPosition();
+        const myPoint = this.getPosition();
         const tarPoint = {
             x: enemyRec.centerX,
             y: enemyRec.centerY
@@ -143,13 +144,14 @@ class ShotItem {
         const {dx ,dy} = this._getDistance(tarPoint);
         this._setSpeed(dx, dy);
         // 位置
-        this._setPosition(myPoint.x + this.vx, myPoint.y + this.vy);
+        this.setPosition(myPoint.x + this.vx, myPoint.y + this.vy);
     }
 
     // 根据角度决定vx,vy
     _setSpeed = (dx = 0, dy = 0) => {
         const tan = dy/dx;
-        this.speed = this.stepLenth / this.getFPS();
+        const time = Math.max(this.BattleGround.scale.x, this.BattleGround.scale.y);
+        this.speed = this.stepLenth* time * this.getFPS();
         const pow = Math.pow(tan, 2);
         this.vx = Math.sqrt(1/(1+pow)) * this.speed;
         this.vy = Math.sqrt(1/(1+1/pow)) * this.speed;
@@ -172,7 +174,7 @@ class ShotItem {
             x = targetX,
             y = targetY;
         }
-        const myPoint = this._getPosition();
+        const myPoint = this.getPosition();
         const xLength = x - myPoint.x;
         const yLength = y - myPoint.y;
         return {
@@ -283,7 +285,7 @@ class ShotItem {
         return this.direction;
     }
 
-    _setPosition(x = 0, y = 0) {
+    setPosition(x = 0, y = 0) {
         if (typeof x === 'object') {
             this.sprite.position.set(x.x, x.y);
         } else {
@@ -291,7 +293,7 @@ class ShotItem {
         }
     }
 
-    _getPosition() {
+    getPosition() {
         const {x, y} = this.sprite;
         return {x, y};
     }

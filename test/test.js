@@ -3,7 +3,13 @@ import * as PIXI from 'pixi.js'
 // import fs from 'fs';
 // var fs  = require('fs');
 var path  = require('path');
-
+let resizeIndex = 0;
+const resizeArea = [
+    {width: 480, height:360},
+    {width: 600, height: 450},
+    {width: 800, height: 600}, 
+    {width: 1000, height: 750}
+]
 
 const fileName = 'try.json';
 
@@ -43,14 +49,17 @@ var imgTempl = '<img src="../images/cat.png" />';
 document.getElementById('test').innerHTML = imgTempl;
 
 
+
+
 document.addEventListener("DOMContentLoaded", function(event) {
     var target = document.getElementById('Test');
     var other = document.getElementById('other');
     var gs = new GameScene();
-    gs.setClientOrServer(GameScene.SERVER);
+    // gs.setClientOrServer(GameScene.SERVER);
     // 客户端则需要传递帧数据
-    // const data = JSON.parse(localStorage.getItem('rt')).data;
-    // gs.setDriveFrames(data);
+    gs.setClientOrServer(GameScene.CLIENT);
+    const data = JSON.parse(localStorage.getItem('rt'));
+    gs.setDriveFrames(data);
     
     gs.mountAt(target);
     gs.setBattleGround(800, 600, {
@@ -58,6 +67,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
         col: 20
     });
 
+    // gs.setFPS(6);
     // 全屏
     // gs.setToFullScreen();
     // 设置背景色
@@ -90,6 +100,9 @@ document.addEventListener("DOMContentLoaded", function(event) {
     // 指定结束场景,及其回调
     gs.overScene('gameOver', null, null, (result, scene, battleGround)=>{
         console.log('所有的操作都在这里啦！')
+        if (gs.isClientOrServer === GameScene.SERVER) {
+            localStorage.setItem('rt', JSON.stringify(battleGround.actionFlows));
+        }
         // console.table(battleGround.actionFlows);
         console.log('gameOver 啦');
     })
@@ -112,8 +125,17 @@ document.addEventListener("DOMContentLoaded", function(event) {
             soldiers: test1.my, 
             user: 'my'
         });
-        gs.start('my');
+
     })
     // gs.initResource(my, enemy)
     // gs.gameStart();
+
+    document.getElementById('btn').onclick = function() {
+        resizeIndex = (resizeIndex+1)%resizeArea.length;
+        let area = resizeArea[resizeIndex]
+        gs.resize(area.width, area.height);
+    }
+    document.getElementById('start').onclick = function() {
+        gs.start('my');
+    }
 });

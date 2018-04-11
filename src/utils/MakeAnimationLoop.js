@@ -171,7 +171,7 @@ export default class AnimationManager {
         const shotItem = new ShotItem(null, frame);
         shotItem.direction = direction;
         shotItem.addToScene(this.holder.getScene());
-        shotItem._setPosition(position);
+        shotItem.setPosition(position);
         shotItem.setAngel(rotation);
         return shotItem;
     }
@@ -218,7 +218,7 @@ export default class AnimationManager {
             }
         } else {
             dest['shotItem'].push({
-                position: subscriber._getPosition(),
+                position: subscriber.getPosition(),
                 isLive: subscriber.canFly,
                 rotation: subscriber.getAngel(),
                 direction: subscriber.getDirection(),

@@ -1,89 +1,53 @@
-这个项目是毕设游戏部分的实现，目的是基于canvas或着webGL实现一个实时的对战系统，
+这个项目是毕设游戏部分的实现，目的是基于canvas或着webGL实现一个实时的对战系统.即服务器端进行结果判定，而多个客户端接受整个流程然后实时同步显示出整个对战流程。现在做的很简陋。
 
-Todo:
+### API:
 
-1. 这里设置动画回调函数只能有一个，以后支持多个，比如moveUp动作由于自带了，所以指定的会覆盖，除非在写this.moveUp，以后支持合并和不合并回调函数(通过true/false参数)
+**GameScene:**
 
-// 做了建库打包，稍微重构了代码，尝试同步流程，尝试同步位置
+Function | Description | Parameter |
+-- | -- | -- |
+GameScene | 构造器 | PIXI Application对象的所有参数width, height, transparent,antialiasing, resolution等 
+start | 运行游戏 | side:初始化哪组兵种对象为左边， autoSize：元素是否自适应画布大小
+resize | 改变画布大小 | width, height
+setClientOrServer | 设置是否客户端 | GameScene.SERVER & GameScene.CLIENT
+before，over,after | 设置场景转化的各个阶段的回掉函数 | name: 场景名称， cb： 回调
+overScene | 指定结束场景 | name： 结束场景名称，pre:结束前回掉，after: 结束后回掉,over:完全结束回掉
+setToFullScreen | 全屏 |
+setBg | 设置背景色 | bg
+getDriveFrames | 获取驱动帧，一般客户端才使用驱动帧进行动画驱动 |
+setDriveFrames | 设置驱动帧,通过设置驱动帧驱动动画 | frames
+mountAt | 设置挂载点 | target: 挂载dom对象
+makeScene | 制作场景 | name: 场景名称 cb ：如果动态创建场景该参数为回掉函数，接受来自上个场景的结果，如果静态场景，则一个PIXI Container对象
+getAllScenes | 获取所有场景
+setBattleGround | 设置战场 | width, height, layout：指定行列数 或者 width/height object , layout,或者layout
+setFPS | 设置游戏帧率 | FPS
+handleLoadProgress | 设置加载资源回掉 | cb 接受两个参数，resource, loader,见PIXI的loader
+load | 加载资源 | src:资源 callback: 回掉,一般开始都是在该回调中进行调用，这样才能保证资源已经正确加载完成
+setSoldiers | 设置兵种 | groupName1: 某组兵种数据 groupName2: 另一组兵种数据,数据样本{user:'', soildiers: [{soliderType:'',count:0}]}
+unmount | 卸载
 
-2.  // 依次按照顺序加载场景
-    // 每个场景结束都调用自己的回调函数，
-    // 并且接受上个场景的结果
-
-3. 1.同步位置，每一个士兵采取动作时同步其敌人的位置及其操作，
-    2. 同步流程, 只要到指定位置执行相应动作即可，但是事实证明由于线程的不确定性，不可能完全一致，有点失败
-    3. 客户端与服务端实时同步，需要更高的要求
-    4. 帧同步， 服务端将每帧操作流程记录，需要重构服务端，
-    5. 改变架构，判断人物状态之类的也在MAL对象中
-
-4. todoList： Soldier注册新的操作或者更/合并/添加原来回调函数的功能实现...
-
-    再次刷新loader 报已经加载资源问题。
-
-api：
-
-Game: 指定游戏大体框架
-    // 必须注意的
-    // Game.load => Game.handleLoadProgress => Game.setBattleGround 在setSoldiers之前
-
-    Game(options)
-    Game.mountAt
-    Game.start
-    Game.over
-    Game.step
-    // 配置加载场景顺序
-    Game.directScenes
-    // 加载图片资源
-    Game.load
-    // 初始化 battleGround对象之类的
-    Game.init
-    // 设置两方士兵
-    Game.setSoldiers
-    // 定制士兵类型
-    Game.makeSoldier
-    // 资源加载过程
-    Game.handleLoadProgress
-    // 图层
-    Game.makeScene
-    // 指定当前显示图层
-    Game.designScene
-    // 战斗结束
-    Game.over
-    // 帧率
-    Game.fps
-    // 跳过动画
-    Game.skipAnimation
-    // 指定BatteleGround，在gameScene中指定
-    Game.setBattleGround
-    // 指定背景色
-    Game.setBackGround
-
-    Game.battlGround 对象
-
-    // 获取指定的图像帧
-    Game.getTextures
-
-BattleGround: 决定游戏元素具体行为
-    // 分配敌人
-    BattleGround.assignSoldier
-    // 激活士兵
-    BattleGround.makeSoldierActive
-    // 
+**必须注意的**  推荐start在load回调函数里调用，并且setBattleGround在load之前定义，最好紧挨着构造函数进行战场的设置
 
 
-Soldier:
-    // 是否射击类
-    Soldier.isShotType
-    // 加载动画帧
-    Soldier.loadAnimateFrames
-    // 指定动画帧
-    Soldier.setAnimateFrames
-    // 指定动画对应回调函数
-    Soldier.setAnimateCallback
-    // 攻击
-    Soldier.attack
-    // 死亡
-    Soldier.die
-    // 
+## TodoList:
+
+1. 服务器帧率和客户端帧率不一致时导致的问题
+
+2. 服务器端和客户端实时通信同步驱动帧，而不是服务器端跑完之后才将所有驱动帧发送给客户端
+
+3. 客户端resize 问题 ---可以解决
+
+4. shotItem 的处理方式问题，现在服务器端只有MAL对象保存，而BattleGround对象不保存，还有其初始位置的问题
+
+5. 同一每个场景结束返回值
+
+6. 可自定义兵种类型，及其动作类型
+
+7. 做成一个框架，每个场景有各自的生命周期，可自定义场景加载顺序，场景资源，场景画面，而不是单单的单一战斗画面
+
+
+
+
+
 
 
