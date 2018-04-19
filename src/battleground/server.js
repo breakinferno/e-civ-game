@@ -419,7 +419,6 @@ export default class BattleGround {
     }
 
 
-
     // TODO: 判断战斗是否结束-> 判断该对象是否存活 -> 判断该对象是否可以攻击-> 移动到
     // 可攻击范围->
     makeChildrenActive(child) {

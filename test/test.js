@@ -55,11 +55,11 @@ document.addEventListener("DOMContentLoaded", function(event) {
     var target = document.getElementById('Test');
     var other = document.getElementById('other');
     var gs = new GameScene();
-    // gs.setClientOrServer(GameScene.SERVER);
+    gs.setClientOrServer(GameScene.SERVER, GameScene.ANIMATION);
     // 客户端则需要传递帧数据
-    gs.setClientOrServer(GameScene.CLIENT);
-    const data = JSON.parse(localStorage.getItem('rt'));
-    gs.setDriveFrames(data);
+    // gs.setClientOrServer(GameScene.CLIENT);
+    // const data = JSON.parse(localStorage.getItem('rt'));
+    // gs.setDriveFrames(data);
     
     gs.mountAt(target);
     gs.setBattleGround(800, 600, {

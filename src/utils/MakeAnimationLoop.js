@@ -108,6 +108,12 @@ export default class AnimationManager {
         this._gameLoop();
     }
 
+    // 产生每帧的图像
+    _generatePng = (canvas) => {
+        const imgData = canvas.toDataURL('image/png');
+        return imgData
+    }
+
     // 每帧需要进行的函数
     // 每个对象进行相应的操作
     _animateFunc = () => {
@@ -116,12 +122,24 @@ export default class AnimationManager {
         };     // 每帧记录对象
         // 每次客户端记录所有位置操作
         if (this.isServerOrClient === SERVER) {
-            this.subscribers.forEach(subscriber => {
-                this._pick(subscriber, rt);
-                this._subscribeAnimate(subscriber);
-            });
-            // 上传该帧状态的对象
-            this.uploadFrameState(rt);
+            const {game} = this.holder;
+            const {view} = game;
+            if (game || game.type === 'ANIMATION') {
+                const png = this._generatePng(view);
+                this.uploadAnimation(png);
+                this.subscribers.forEach(subscriber => {                
+                    this._subscribeAnimate(subscriber);
+                });
+            } else if (game || game.type === 'FRAMW') {
+                this.subscribers.forEach(subscriber => {                
+                    this._pick(subscriber, rt);
+                    this._subscribeAnimate(subscriber);
+                });
+                // 上传该帧状态的对象
+                this.uploadFrameState(rt);
+            } else {
+                console.warn('the type of this game should be "ANIMATION" or "FRAME"')
+            }
         } 
 
         if (this.isServerOrClient === CLIENT) {
@@ -186,6 +204,14 @@ export default class AnimationManager {
             index: this.frameIndex,
             data: state
         });
+    }
+
+    // 上传某一帧图像
+    /**
+     * @param {string} png 帧图像
+     */
+    uploadAnimation(png) {
+        this.holder.receiveAction(png);
     }
 
     // 每个订阅者动画

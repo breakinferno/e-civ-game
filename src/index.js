@@ -37,6 +37,8 @@ class GameScene {
 
     static CLIENT = CLIENT;
     static SERVER = SERVER;
+    static ANIMATION = 'ANIMATION';
+    static FRAME = 'FRAME';
     // 默认的画布宽高
     static DEFAULT_WIDTH = GAME_DEFAULT_WIDTH;
     static DEFAULT_HEIGHT = GAME_DEFAULT_HEIGHT;
@@ -75,7 +77,7 @@ class GameScene {
         loader.baseUrl = baseUrl;
     }
 
-    setClientOrServer(isClientOrServer) {
+    setClientOrServer(isClientOrServer, type = 'FRAME') {
         if (isClientOrServer === SERVER) {
             BattleGround = BG.server;
             Soldiers = Soldier.Soldier_server;
@@ -83,6 +85,7 @@ class GameScene {
             BattleGround = BG.client;
             Soldiers = Soldier.Soldier_client;
         }
+        this.type = type;
         this.isClientOrServer = isClientOrServer;
     }
 
