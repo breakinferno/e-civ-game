@@ -286,6 +286,10 @@ export default class AnimationManager {
             return;
         }
         if (this.isServerOrClient === SERVER) {
+            const {game} = this.holder;
+            if (game || game.type === 'ANIMATION') {
+                return
+            }
             //发送结果
             this.uploadFrameState({
                 winner: result,
