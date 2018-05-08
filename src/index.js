@@ -64,6 +64,24 @@ class GameScene {
         this.battleGround.battle();
     }
 
+    resume() {
+        if(this.battleGround) {
+            const { MAL } = this.battleGround;
+            MAL.resume();
+        } else {
+            console.error('you should pass the BattleGround！');
+        }      
+    }
+
+    pause() {
+        if(this.battleGround) {
+            const { MAL } = this.battleGround;
+            MAL.pause();
+        } else {
+            console.error('you should pass the BattleGround！');
+        }
+    }
+
     resize = (width, height) => {
         this.battleGround.resize(width, height);
 

@@ -4,6 +4,7 @@ import * as PIXI from 'pixi.js'
 // var fs  = require('fs');
 var path  = require('path');
 let resizeIndex = 0;
+let opCount = 0;
 const resizeArea = [
     {width: 480, height:360},
     {width: 600, height: 450},
@@ -55,7 +56,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
     var target = document.getElementById('Test');
     var other = document.getElementById('other');
     var gs = new GameScene();
-    gs.setClientOrServer(GameScene.SERVER, GameScene.ANIMATION);
+    gs.setClientOrServer(GameScene.SERVER, GameScene.FRAME);
     // 客户端则需要传递帧数据
     // gs.setClientOrServer(GameScene.CLIENT);
     // const data = JSON.parse(localStorage.getItem('rt'));
@@ -137,5 +138,14 @@ document.addEventListener("DOMContentLoaded", function(event) {
     }
     document.getElementById('start').onclick = function() {
         gs.start('my');
+    }
+
+    document.getElementById('op').onclick = function() {
+        opCount = (opCount + 1) % 2;
+        if (opCount === 1) {
+            gs.pause();
+            return;
+        }
+        gs.resume();
     }
 });

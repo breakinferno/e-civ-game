@@ -27,9 +27,10 @@ class ShotItem {
 
     // 动画接口
     active = () => {
-        if (this.canFly) {
-            this.fly();
-        }
+        // if (this.canFly) {
+        //     this.fly();
+        // }
+        this.BattleGround.makeChildrenActive(this);
     }
 
     setDirection = (direction) => {
@@ -61,6 +62,9 @@ class ShotItem {
     // 设置图案
     setTexture(texture) {
         // 可以做一些判定是否是texture对象
+        if (!texture) {
+            return;
+        }
         const type = toString.call(texture).slice(8, -1);
         if (type === 'Array') {
             this.sprite.texture = texture[0];
@@ -191,29 +195,31 @@ class ShotItem {
         const rotation = this._getRotation(dx, dy);
         // 第一象限
         if (dx > 0 && dy > 0) {
+            // 顺时针
             if (abdx > abdy) {
                 this.angel = rotation;
             }
+            // 逆时针
             if (abdx < abdy) {
-                this.angel = -rotation;
+                this.angel = rotation - Math.PI/2;
             }
         }
 
         if (dx < 0 && dy >0) {
             if (abdx > abdy) {
-                this.angel = rotation;
+                this.angel = -rotation;
             }
             if (abdx < abdy) {
-                this.angel = -rotation;
+                this.angel = Math.PI/2 - rotation;
             }
         }
 
         if (dx >0 && dy < 0) {
             if (abdx > abdy) {
-                this.angel = rotation;
+                this.angel = -rotation;
             }
             if (abdx < abdy) {
-                this.angel = -rotation;
+                this.angel = Math.PI/2-rotation;
             }
         }
 
@@ -222,7 +228,7 @@ class ShotItem {
                 this.angel = rotation;
             }
             if (abdx < abdy) {
-                this.angel = -rotation;
+                this.angel = rotation - Math.PI/2;
             }
         }
         // 旋转角度
@@ -239,7 +245,7 @@ class ShotItem {
 
     // 获取旋转角度
     _getRotation = (width, height) =>{
-        return width?Math.atan(height/width):0;
+        return width?Math.atan(Math.abs(height/width)):0;
     }
 
     // 判断是否是击中

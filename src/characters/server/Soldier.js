@@ -201,6 +201,7 @@ class Solider {
         let initWidth, initHeight;
         // shot fly
         const shotItem = new ShotItem(enemy);
+        shotItem.BattleGround = this.BattleGround;
         shotItem.direction = direction;
         this.BattleGround.registAnimation(shotItem);
         // this.BattleGround.addChild(shotItem);

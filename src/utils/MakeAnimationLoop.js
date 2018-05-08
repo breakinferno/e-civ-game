@@ -124,13 +124,13 @@ export default class AnimationManager {
         if (this.isServerOrClient === SERVER) {
             const {game} = this.holder;
             const {view} = game;
-            if (game || game.type === 'ANIMATION') {
+            if (game && game.type === 'ANIMATION') {
                 const png = this._generatePng(view);
                 this.uploadAnimation(png);
                 this.subscribers.forEach(subscriber => {                
                     this._subscribeAnimate(subscriber);
                 });
-            } else if (game || game.type === 'FRAMW') {
+            } else if (game && game.type === 'FRAME') {
                 this.subscribers.forEach(subscriber => {                
                     this._pick(subscriber, rt);
                     this._subscribeAnimate(subscriber);
@@ -279,6 +279,19 @@ export default class AnimationManager {
 
     setFPS(FPS) {
         this.FPS = FPS;
+    }
+
+    pause() {
+        if (this.isStop) {
+           return; 
+        }
+        this.isStop = true;
+        this.timer?window.cancelAnimationFrame(this.timer):null;
+    }
+
+    resume() {
+        this.isStop = false;
+        this._gameLoop();
     }
 
     stop = (result) => {
